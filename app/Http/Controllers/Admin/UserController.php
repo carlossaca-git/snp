@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Rol; // Asegúrate de importar tu modelo de Roles
+use App\Models\Rol;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -13,76 +13,29 @@ use App\Notifications\NuevoUsuarioCreado;
 
 class UserController extends Controller
 {
-    public function edit(User $user)
+    /**
+     * Listado de Usuarios
+     */
+    public function index()
     {
-        // Cargamos los roles para el select
-        $roles = Rol::all();
+        $usuarios = User::with('roles')->orderBy('id_usuario', 'desc')->paginate(10);
 
-        // Obtenemos el ID del rol actual del usuario desde la tabla pivote
-        $rolActual = $user->roles->first()?->id_rol;
-
-        return view('admin.users.editar', compact('user', 'roles', 'rolActual'));
+        // 3. Vista actualizada: carpeta 'administracion/usuarios'
+        return view('administracion.usuarios.index', compact('usuarios'));
     }
 
     /**
-     * PROCESA LA ACTUALIZACION DE LOS DATOS
+     * Formulario de Creación
      */
-    public function update(Request $request, User $user)
-    {
-        $request->validate([
-            'identificacion'     => ['required', Rule::unique('seg_usuario')->ignore($user->id_usuario, 'id_usuario')],
-            'nombres'            => 'required|string|max:255',
-            'apellidos'          => 'required|string|max:255',
-            'correo_electronico' => ['required', 'email', Rule::unique('seg_usuario')->ignore($user->id_usuario, 'id_usuario')],
-            'id_rol'             => 'required|exists:seg_rol,id_rol',
-            // La contraseña es opcional al editar
-            'password'           => 'nullable|confirmed|min:8',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            // 1. Actualizar datos básicos
-            $user->update([
-                'identificacion'     => $request->identificacion,
-                'nombres'            => $request->nombres,
-                'apellidos'          => $request->apellidos,
-                'correo_electronico' => $request->correo_electronico,
-            ]);
-
-            // 2. Si el admin escribió una nueva contraseña, la actualizamos
-            if ($request->filled('password')) {
-                $user->update(['password' => Hash::make($request->password)]);
-            }
-
-            // 3. Sincronizar el rol (sync borra el anterior y pone el nuevo)
-            $user->roles()->sync([$request->id_rol]);
-
-            DB::commit();
-            return redirect()->route('admin.users.index')->with('status', 'Usuario actualizado correctamente.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Fallo al actualizar: ' . $e->getMessage()]);
-        }
-    }
-    public function index()
-    {
-        // Traemos todos los roles de tu tabla para llenar el select
-        $roles = Rol::all();
-        //dd($roles);
-        $usuarios = User::with('roles')->orderBy('id_usuario', 'desc')->paginate(10);
-
-        return view('admin.users.index', compact('usuarios'));
-    }
-
     public function create()
     {
-        // Traemos los roles para el select del formulario
         $roles = Rol::all();
-
-        return view('admin.users.crear', compact('roles'));
+        return view('administracion.usuarios.crear', compact('roles'));
     }
 
+    /**
+     * Guardar Usuario
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -98,7 +51,7 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
-            // 1. Crear el usuario en seg_usuario
+            // Crear Usuario
             $user = User::create([
                 'identificacion'     => $request->identificacion,
                 'nombres'            => $request->nombres,
@@ -108,45 +61,103 @@ class UserController extends Controller
                 'password'           => Hash::make($request->password),
             ]);
 
-            // 2. Asignar el rol en la tabla pivote seg_usuario_perfil
+            // Asignar Rol
             $user->roles()->attach($request->id_rol);
 
             DB::commit();
 
-            // Redirigimos al listado con un mensaje de éxito
-            // NOTIFICACIÓN: Enviamos el correo al nuevo usuario
-            // Pasamos la contraseña original (sin encriptar) que viene del request
-            $user->notify(new NuevoUsuarioCreado($request->password, $user));
+            // Notificación
+            try {
+                $user->notify(new NuevoUsuarioCreado($request->password, $user));
+            } catch (\Exception $e) {
+                // Si falla el correo, no revertimos la creación del usuario, solo avisamos
+                // Opcional: Log::error('Fallo correo: ' . $e->getMessage());
+            }
 
-            return redirect()->route('admin.users.index')
-                ->with('status', '¡Usuario creado y notificacion enviada');
+            // 4. Redirección actualizada: 'administracion.usuarios.index'
+            return redirect()->route('administracion.usuarios.index')
+                ->with('status', 'Usuario creado y notificación enviada.');
+
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error al guardar: ' . $e->getMessage()])->withInput();
         }
     }
-    // app/Http/Controllers/Admin/UserController.php
 
-    public function destroy(User $user)
+    /**
+     * Formulario de Edición
+     * Nota: Usamos $usuario en lugar de $user porque en routes definimos parameters(['usuarios' => 'usuario'])
+     */
+    public function edit(User $usuario)
     {
-        // Evitar que el administrador se borre a sí mismo
-        if (auth()->id() === $user->id_usuario) {
+        $roles = Rol::all();
+        $rolActual = $usuario->roles->first()?->id_rol;
+
+        // Pasamos la variable compactada como 'usuario' para que coincida con la ruta
+        return view('administracion.usuarios.editar', compact('usuario', 'roles', 'rolActual'));
+    }
+
+    /**
+     * Actualizar Usuario
+     */
+    public function update(Request $request, User $usuario)
+    {
+        $request->validate([
+            'identificacion'     => ['required', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
+            'nombres'            => 'required|string|max:255',
+            'apellidos'          => 'required|string|max:255',
+            'correo_electronico' => ['required', 'email', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
+            'id_rol'             => 'required|exists:seg_rol,id_rol',
+            'password'           => 'nullable|confirmed|min:8',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $usuario->update([
+                'identificacion'     => $request->identificacion,
+                'nombres'            => $request->nombres,
+                'apellidos'          => $request->apellidos,
+                'correo_electronico' => $request->correo_electronico,
+            ]);
+
+            if ($request->filled('password')) {
+                $usuario->update(['password' => Hash::make($request->password)]);
+            }
+
+            $usuario->roles()->sync([$request->id_rol]);
+
+            DB::commit();
+
+            return redirect()->route('administracion.usuarios.index')
+                ->with('status', 'Usuario actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Fallo al actualizar: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Eliminar Usuario
+     */
+    public function destroy(User $usuario)
+    {
+        if (auth()->id() === $usuario->id_usuario) {
             return back()->withErrors(['error' => 'No puedes eliminar tu propia cuenta administrativa.']);
         }
 
         try {
             DB::beginTransaction();
 
-            // 1. Eliminamos la relación en la tabla pivote (seg_usuario_perfil)
-            // El método detach() borra las entradas en la intermedia automáticamente
-            $user->roles()->detach();
-
-            // 2. Eliminamos al usuario de la tabla seg_usuario
-            $user->delete();
+            $usuario->roles()->detach();
+            $usuario->delete();
 
             DB::commit();
 
-            return redirect()->route('admin.users.index')->with('status', 'Usuario eliminado correctamente del sistema.');
+            return redirect()->route('administracion.usuarios.index')
+                ->with('status', 'Usuario eliminado correctamente.');
+
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error al eliminar: ' . $e->getMessage()]);

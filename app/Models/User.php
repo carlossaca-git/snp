@@ -80,6 +80,7 @@ class User extends Authenticatable
     }
     public function tieneRol($rolNombre)
     {
+
         if (!auth()->user()->tieneRol('ADMIN_TI')) {
             abort(403, 'No tienes permiso para acceder a esta sección.');
         }
@@ -87,4 +88,5 @@ class User extends Authenticatable
         $usuarios = User::with('roles')->paginate(10);
         return view('admin.users.index', compact('usuarios'));
     }
+
 }

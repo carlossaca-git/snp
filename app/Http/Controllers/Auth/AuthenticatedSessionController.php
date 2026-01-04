@@ -23,13 +23,17 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
+{
+    // 1. Borramos la trampa (el dd) para que el código siga
 
-        $request->session()->regenerate();
+    $request->authenticate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
-    }
+    $request->session()->regenerate();
+
+    // 2. AQUÍ ESTÁ LA SOLUCIÓN AL ERROR 404
+    // En lugar de usar HOME o '/principal', le obligamos a ir al dashboard
+    return redirect()->intended(route('dashboard'));
+}
 
     /**
      * Destroy an authenticated session.
@@ -44,4 +48,5 @@ class AuthenticatedSessionController extends Controller
 
         return redirect('/');
     }
+
 }

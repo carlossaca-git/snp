@@ -10,6 +10,7 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string $roleName)
     {
+        dd(auth()->user()->toArray());
         // 1. Verificamos si el usuario está logueado
         if (!Auth::check()) {
             return redirect('login');

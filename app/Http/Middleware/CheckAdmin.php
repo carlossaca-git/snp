@@ -17,8 +17,10 @@ class CheckAdmin
      */
     public function handle(Request $request, Closure $next)
     {
+
         // Si el usuario no está logueado o no pasa la Gate 'admin-access'
         if (!auth()->check() || !Gate::allows('admin-access')) {
+
             abort(403, 'Acceso denegado. Se requieren permisos de Administrador.');
         }
 
