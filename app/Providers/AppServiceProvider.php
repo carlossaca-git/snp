@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Gate;
-use App\Models\User;
+use App\Models\Seguridad\User;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Pagination\Paginator;
 
@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
            return $user->roles->contains('nombre_rol', 'SUPERADMIN');
 
         });
-        Paginator::useBootstrap();
+        Paginator::useBootstrapFive();
 
 
 

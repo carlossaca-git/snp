@@ -1,0 +1,136 @@
+/* Estilo cuando el ODS NO está seleccionado */
+.ods-card {
+    cursor: pointer;
+    border: 2px solid #eee !important;
+    transition: all 0.3s ease;
+    background-color: white !important;
+}
+
+/* Estilo cuando el ODS SÍ está seleccionado (Checkeado) */
+.btn-check:checked+.ods-card {
+    border-color: #007bff !important;
+    /* Borde azul */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+}
+
+/* Efecto de Check de validación */
+.btn-check:checked+.ods-card::after {
+    content: '\f058';
+    /* Icono de check de FontAwesome */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    color: #28a745;
+    font-size: 1.2rem;
+}
+
+/* Hover simple */
+.ods-card:hover {
+    background-color: #f8f9fa !important;
+    border-color: #ccc !important;
+}
+
+/* Contenedor de paginación */
+.pagination-custom .pagination {
+    margin-bottom: 0;
+    gap: 5px;
+    /* Espacio entre cuadritos */
+}
+
+/* Estilo base de los botones */
+.pagination-custom .page-link {
+    border-radius: 8px !important;
+    border: 1px solid #e9ecef;
+    color: #495057;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+/* Botón activo (Página actual) */
+.pagination-custom .page-item.active .page-link {
+    background-color: #007bff;
+    /* Color azul de tu botón Buscar */
+    border-color: #007bff;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+/* Hover (Al pasar el mouse) */
+.pagination-custom .page-link:hover {
+    background-color: #f8f9fa;
+    color: #007bff;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+}
+
+/* Deshabilitados (Anterior/Siguiente cuando no hay más) */
+.pagination-custom .page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    color: #ced4da;
+    border-color: #e9ecef;
+}
+
+/* Esto elimina específicamente la descripción de texto en Bootstrap 5 */
+.pagination-clean p.text-muted {
+    display: none !important;
+}
+
+/* Centra los números */
+.pagination-clean nav {
+    display: flex;
+    justify-content: center;
+}
+
+/* Esto elimina específicamente la descripción de texto en Bootstrap 5 */
+.pagination-clean p.text-muted {
+    display: none !important;
+}
+
+/* Centra los números */
+.pagination-clean nav {
+    display: flex;
+    justify-content: center;
+}
+/* Agregamos el prefijo .pagination-custom para forzar la prioridad */
+
+.pagination-custom .pagination {
+    margin-bottom: 0;
+    gap: 5px !important;
+}
+
+.pagination-custom .page-link {
+    border-radius: 8px !important;
+    border: 1px solid #e9ecef !important;
+    color: #495057;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Estado Activo (Página actual) */
+.pagination-custom .page-item.active .page-link {
+    background-color: #007bff !important; /* Tu color azul */
+    border-color: #007bff !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+/* Hover */
+.pagination-custom .page-link:hover {
+    background-color: #f8f9fa !important;
+    color: #007bff !important;
+    transform: translateY(-1px);
+}
+
+/* Ocultar el texto de Laravel "Showing..." */
+.pagination-custom nav .flex.items-center.justify-between,
+.pagination-custom nav p.text-muted {
+    display: none !important;
+}

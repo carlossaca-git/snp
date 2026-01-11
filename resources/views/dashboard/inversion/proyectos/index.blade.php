@@ -1,223 +1,139 @@
 @extends('layouts.app')
 
 @section('content')
-    {{-- ENCABEZADO: Título y Botón Crear --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">Banco de Proyectos</h1>
-            <p class="text-muted mb-0 small">Gestión y seguimiento de inversiones</p>
-        </div>
-        <a href="{{ route('inversion.proyectos.create') }}" class="btn btn-primary">
-            <span data-feather="plus"></span> Nuevo Proyecto
-        </a>
-    </div>
-    {{-- Mensaje de Éxito --}}
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <span data-feather="check-circle" class="me-2"></span>
-                <div>
-                    <strong>¡Excelente!</strong> {{ session('success') }}
-                </div>
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-0 text-dark fw-bold">Banco de Proyectos de Inversión</h1>
+                <p class="text-muted">Listado oficial de intervenciones y alineación estratégica.</p>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <a href="{{ route('inversion.proyectos.create') }}"
+                class="btn btn-dark border-2 fw-bold d-inline-flex align-items-center">
+                <span data-feather="plus" data-feather="plus"></span> Nuevo Proyecto
+            </a>
         </div>
-    @endif
-
-    {{-- Mensaje de Error (por si algo falla en el futuro) --}}
-    @if (session('error'))
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <span data-feather="alert-triangle" class="me-2"></span>
-                {{ session('error') }}
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    {{-- TARJETA BLANCA DE CONTENIDO --}}
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1 small">Total Proyectos</h6>
-                        <h2 class="mb-0">{{ $stats['total_proyectos'] }}</h2>
-                    </div>
-                    <span data-feather="briefcase" style="width: 40px; height: 40px; opacity: 0.5;"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1 small">Inversión Total</h6>
-                        <h2 class="mb-0">${{ number_format($stats['inversion_total'], 2) }}</h2>
-                    </div>
-                    <span data-feather="dollar-sign" style="width: 40px; height: 40px; opacity: 0.5;"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-uppercase mb-1 small">Promedio por Proyecto</h6>
-                        <h2 class="mb-0">${{ number_format($stats['promedio_monto'], 2) }}</h2>
-                    </div>
-                    <span data-feather="trending-up" style="width: 40px; height: 40px; opacity: 0.5;"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-            {{-- BARRA DE HERRAMIENTAS (Buscador) --}}
-            <div class="row mb-4 justify-content-between align-items-center">
-                <div class="col-md-4">
-                    <form action="{{ route('inversion.proyectos.index') }}" method="GET" class="row g-2">
-                        <div class="col-md-5">
-                            <input type="text" name="search" class="form-control"
-                                placeholder="Buscar por nombre o CUP..." value="{{ request('search') }}">
-                        </div>
+        @include('partials.mensajes')
+        <form action="{{ route('inversion.proyectos.index') }}" method="GET">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body bg-light rounded">
+                    <div class="row g-3">
                         <div class="col-md-4">
-                            <select name="tipo" class="form-select" onchange="this.form.submit()">
-                                <option value="">-- Todos los tipos --</option>
-                                <option value="Obra" {{ request('tipo') == 'Obra' ? 'selected' : '' }}>Obra</option>
-                                <option value="Bien" {{ request('tipo') == 'Bien' ? 'selected' : '' }}>Bien</option>
-                                <option value="Servicio" {{ request('tipo') == 'Servicio' ? 'selected' : '' }}>Servicio
-                                </option>
-                            </select>
+                            <input type="text" name="buscar" class="form-control"
+                                placeholder="Buscar por CUP o Nombre..." value="{{ request('buscar') }}">
                         </div>
                         <div class="col-md-3">
-                            <button type="submit" class="btn btn-light border w-100">Filtrar</button>
+                            <select name="entidad" class="form-select">
+                                <option value="">Todas las Entidades</option>
+                                @foreach ($unidades as $u)
+                                    <option value="{{ $u->id_unidad_ejecutora }}"
+                                        {{ request('entidad') == $u->id_unidad_ejecutora ? 'selected' : '' }}>
+                                        {{ $u->nombre_unidad }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                    </form>
-                </div>
-                <div class="col-md-auto text-end">
-                    <span class="text-muted small">Mostrando {{ $proyectos->count() }} registros</span>
+
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-secondary w-100">Filtrar</button>
+                        </div>
+
+                        @if (request()->filled('buscar') || request()->filled('entidad'))
+                            <div class="col-md-2">
+                                <a href="{{ route('inversion.proyectos.index') }}" class="btn btn-link text-muted w-100">
+                                    Limpiar
+                                </a>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
+        </form>
 
-            {{-- TABLA DE DATOS --}}
+        <div class="card shadow-sm border-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-dark text-white">
                         <tr>
-                            <th scope="col" class="text-secondary small text-uppercase">CUP / Código</th>
-                            <th scope="col" class="text-secondary small text-uppercase">Nombre del Proyecto</th>
-                            <th scope="col" class="text-secondary small text-uppercase">Programa</th>
-                            <th scope="col" class="text-secondary small text-uppercase">Inversión ($)</th>
-                            <th scope="col" class="text-secondary small text-uppercase">Estado</th>
-                            <th scope="col" class="text-end text-secondary small text-uppercase">Acciones</th>
+                            <th class="ps-3">CUP</th>
+                            <th>Nombre del Proyecto</th>
+                            <th>Entidad Responsable</th>
+                            <th>Alineación PND</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-end pe-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($proyectos as $proyecto)
+                        @forelse($proyectos as $p)
                             <tr>
-                                {{-- Columna 1: Código --}}
-                                <td class="fw-bold text-dark">
-                                    {{ $proyecto->cup ?? '---' }}
+                                <td class="ps-3">
+                                    <span class="badge bg-light text-dark border fw-bold">{{ $p->cup }}</span>
                                 </td>
-
-                                {{-- Columna 2: Nombre --}}
                                 <td>
-                                    <div class="text-wrap" style="max-width: 300px;">
-                                        {{ $proyecto->nombre_proyecto }}
-                                    </div>
-                                    <small class="text-muted d-block">
-                                        {{ $proyecto->tipo_inversion }}
-                                    </small>
+                                    <a href="{{ route('inversion.proyectos.show', $p->id) }}">
+                                        <div class="fw-bold text-dark">{{ Str::limit($p->nombre_proyecto, 50) }}</div>
+                                    </a>
+                                    <small class="text-muted">Prog:
+                                        {{ $p->programa->nombre_programa ?? 'Sin Programa' }}</small>
                                 </td>
-
-                                {{-- Columna 3: Programa Relacionado --}}
                                 <td>
-                                    <span class="badge bg-light text-dark border">
-                                        {{ $proyecto->programa->codigo_programa ?? 'N/A' }}
-                                    </span>
+                                    <div class="small">{{ $p->organizacion->siglas ?? 'No asignada' }}</div>
                                 </td>
-
-                                {{-- Columna 4: Monto --}}
-                                <td class="fw-bold text-success">
-                                    ${{ number_format($proyecto->monto_total_inversion, 2) }}
-                                </td>
-
-                                {{-- Columna 5: Estado con Colores --}}
                                 <td>
-                                    @php
-                                        $estadoClasses = [
-                                            'Solicitado' => 'bg-warning text-dark',
-                                            'Aprobado' => 'bg-success',
-                                            'Rechazado' => 'bg-danger',
-                                            'Observado' => 'bg-info text-dark',
-                                        ];
-                                        $clase = $estadoClasses[$proyecto->estado_dictamen] ?? 'bg-secondary';
-                                    @endphp
-                                    <span class="badge rounded-pill {{ $clase }}">
-                                        {{ $proyecto->estado_dictamen }}
-                                    </span>
+                                    @if ($p->objetivo)
+                                        <span class="badge bg-info text-dark"
+                                            title="{{ $p->objetivo->descripion_objetivo }}">
+                                            <span data-feather="target" style="width: 12px"></span> Obj.
+                                            {{ $p->objetivo->id_objetivo_nacional }}
+                                        </span>
+                                    @else
+                                        <span class="badge bg-warning text-dark">No alineado</span>
+                                    @endif
                                 </td>
-
-                                {{-- Columna 6: Botones de Acción --}}
-                                <td class="text-end">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('inversion.proyectos.show', $proyecto->id) }}"
-                                            class="btn btn-outline-secondary" title="Ver Detalles">
-                                            <span data-feather="eye"></span>
+                                <td class="text-center">
+                                    @if ($p->estado == 1)
+                                        <span class="badge rounded-pill bg-success">Activo</span>
+                                    @else
+                                        <span class="badge rounded-pill bg-secondary">Inactivo</span>
+                                    @endif
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group shadow-sm">
+                                        <a href="{{ route('inversion.proyectos.show', $p->id) }}"
+                                            class="btn btn-sm btn-info text-white" title="Ver detalles">
+                                            <i class="" data-feather="eye"></i>
                                         </a>
-                                        <a href="{{ route('inversion.proyectos.edit', $proyecto->id) }}"
-                                            class="btn btn-outline-primary" title="Editar">
-                                            <span data-feather="edit-2"></span>
+                                        <a href="{{ route('inversion.proyectos.edit', $p->id) }}"
+                                            class="btn btn-sm btn-white border" title="Editar">
+                                            <span data-feather="edit" class="text-primary"></span>
                                         </a>
+                                        <form action="{{ route('inversion.proyectos.destroy', $p->id) }}" method="POST"
+                                            class="d-inline"
+                                            onsubmit="return confirm('¿Estás SEGURO de eliminar este proyecto?\n\nSe borrarán también sus metas y financiamientos.');">
 
-                                        {{-- Botón Eliminar con confirmación --}}
-                                        <form action="{{ route('inversion.proyectos.destroy', $proyecto->id) }}"
-                                            method="POST" class="d-inline"
-                                            onsubmit="return confirm('¿Estás seguro de eliminar este proyecto? Esta acción no se puede deshacer.');">
                                             @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar">
-                                                <span data-feather="trash-2"></span>
+                                            @method('DELETE') <button type="submit"
+                                                class="btn btn-sm btn-white border text-danger" title="Eliminar Proyecto">
+                                                <i class="fas fa-trash fs-5" data-feather="trash-2"></i>
                                             </button>
+
                                         </form>
                                     </div>
-
-                                    <form id="delete-form-{{ $proyecto->id }}"
-                                        action="{{ route('inversion.proyectos.destroy', $proyecto->id) }}" method="POST"
-                                        class="d-none">
-                                        @csrf @method('DELETE')
-                                    </form>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <div class="text-muted">
-                                        <span data-feather="folder" style="width: 40px; height: 40px; opacity: 0.5;"></span>
-                                        <p class="mt-2">No se encontraron proyectos registrados.</p>
-                                        <a href="{{ route('inversion.proyectos.create') }}"
-                                            class="btn btn-sm btn-primary mt-2">
-                                            Crear el primero
-                                        </a>
-                                    </div>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <span data-feather="info" class="mb-2" style="width: 48px; height: 48px;"></span>
+                                    <p>No hay proyectos registrados en el banco de inversión.</p>
                                 </td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
+                <div class="mt-3">
+                    {{ $proyectos->appends(['buscar' => request('buscar')])->links() }}
+                </div>
             </div>
-
-            {{-- PAGINACIÓN --}}
-            <div class="mt-4 d-flex justify-content-end">
-                {{ $proyectos->links() }}
-            </div>
-
         </div>
     </div>
 @endsection

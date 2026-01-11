@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    {{-- Estilos personalizados para este archivo (Armonía Institucional) --}}
+    {{-- Estilos personalizados para este archivo --}}
     <style>
         /* Paleta de colores Institucional */
         .text-slate-800 {
@@ -54,52 +54,34 @@
                 </div>
                 {{-- BARRA DE BÚSQUEDA Y ACCIONES --}}
                 <div class="row mb-3 align-items-center">
-
                     {{-- COLUMNA IZQUIERDA: BUSCADOR --}}
                     <div class="col-md-6">
-                        <form action="{{ route('estrategico.organizaciones.index') }}" method="GET">
+                        <form action="{{ route('institucional.organizaciones.index') }}" method="GET">
                             <div class="input-group shadow-sm">
-
-                                {{-- 1. Lupa --}}
+                                {{-- Lupa --}}
                                 <span class="input-group-text bg-white border-end-0 text-muted">
                                     <i class="fas fa-search"></i>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                        fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                                        <path
-                                            d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                                    </svg>
                                 </span>
-
-                                {{-- 2. Input --}}
+                                {{-- Input --}}
                                 <input type="text" name="busqueda"
                                     class="form-control border-start-0 border-end-0 shadow-none"
                                     placeholder="Buscar institución, RUC o siglas..." value="{{ request('busqueda') }}">
-
-                                {{-- 3. Botón X (Solo si hay búsqueda) --}}
+                                {{--  Botón X (Solo si hay búsqueda) --}}
                                 @if (request('busqueda'))
-                                    <a href="{{ route('estrategico.organizaciones.index') }}"
+                                    <a href="{{ route('institucional.organizaciones.index') }}"
                                         class="btn bg-white border-top border-bottom border-end-0 text-danger"
                                         style="z-index: 5;" title="Limpiar filtro">
-                                        <i class="fas fa-times">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                                                <path
-                                                    d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
-                                            </svg>
-                                        </i>
-
+                                        <i class="fas fa-times"></i>
                                     </a>
                                 @endif
-
-                                {{-- 4. Botón Buscar --}}
+                                {{-- Botón Buscar --}}
                                 <button class="btn btn-primary" type="submit">Buscar</button>
                             </div>
                         </form>
                     </div>
-
                     {{-- COLUMNA DERECHA: BOTÓN NUEVA INSTITUCIÓN --}}
                     <div class="col-md-6 text-end">
-                        <a href="{{ route('estrategico.organizaciones.create') }}" class="btn btn-outline-secondary">
+                        <a href="{{ route('institucional.organizaciones.create') }}" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left"></i> Nueva Institución
                         </a>
                     </div>
@@ -147,7 +129,7 @@
                             <tbody class="border-top-0">
                                 @forelse ($organizaciones as $organizacion)
                                     <tr class="clickable-row border-bottom transition-all"
-                                        data-href="{{ route('estrategico.alineacion.organizaciones.perfil', $organizacion->id_organizacion) }}"
+                                        data-href="{{ route('institucional.organizaciones.show', $organizacion->id_organizacion) }}"
                                         data-bs-placement="top"
                                         title="Clic para mas informacion de: {{ $organizacion->nom_organizacion }}">
 
@@ -212,7 +194,7 @@
                                                     Alinear
                                                 </a>
                                                 <form
-                                                    action="{{ route('estrategico.organizaciones.destroy', $organizacion->id_organizacion) }} method="POST"
+                                                    action="{{ route('institucional.organizaciones.destroy', $organizacion->id_organizacion) }} method="POST"
                                                     onsubmit="return confirm('¿Estás seguro? Se borrará todo el historial.');"
                                                     style="display: inline-block;">
                                                     @csrf

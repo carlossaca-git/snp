@@ -11,32 +11,7 @@
             <i class="fas fa-plus fa-sm text-white-50"></i> Nuevo Objetivo
         </button>
     </div>
-
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert"
-            id="success-alert">
-            <div class="d-flex align-items-center">
-                {{-- Icono dinámico --}}
-                <i data-feather="check-circle" class="me-2"></i>
-                <div>
-                    {{ session('success') }}
-                </div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-
-        <script>
-            // Hacer que el mensaje desaparezca solo tras 4 segundos
-            setTimeout(function() {
-                var alert = document.getElementById('success-alert');
-                if (alert) {
-                    var bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }
-            }, 4000);
-        </script>
-    @endif
-
+    @include('partials.mensajes')
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -64,8 +39,8 @@
                                 </td>
                                 <td>
                                     <div class="small"><span class="badge bg-info text-dark">
-                                            @if ($item->relEje)
-                                                {{ $item->relEje->nombre_eje }}
+                                            @if ($item->eje)
+                                                {{ $item->eje->nombre_eje }}
                                             @else
                                                 <span class="text-muted">No asignado</span>
                                             @endif
@@ -97,7 +72,7 @@
                                         </button>
 
                                         <form
-                                            action="{{ route('configuracion.pnd.destroy', $item->id_objetivo_nacional) }}"
+                                            action="{{ route('catalogos.pnd.destroy', $item->id_objetivo_nacional) }}"
                                             method="POST" class="d-inline form-eliminar">
                                             @csrf
                                             @method('DELETE')
@@ -146,7 +121,7 @@
                                 <label class="form-label fw-bold">Eje Estratégico</label>
                                 <select name="id_eje" id="edit_pnd_eje" class="form-select" required>
                                     <option value="">Seleccione...</option>
-                                    @foreach ($ejes as $eje)
+                                    @foreach ($relEje as $eje)
                                         <option value="{{ $eje->id_eje }}">{{ $eje->nombre_eje }}</option>
                                     @endforeach
                                 </select>
@@ -194,7 +169,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
                 </div>
-                <form action="{{ route('configuracion.pnd.store') }}" method="POST">
+                <form action="{{ route('catalogos.pnd.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="row">
@@ -207,7 +182,7 @@
                                 <label class="form-label fw-bold">Eje Estratégico</label>
                                 <select name="id_eje" class="form-select" required>
                                     <option value="" selected disabled>Seleccione un eje...</option>
-                                    @foreach ($ejes as $eje)
+                                    @foreach ($relEje as $eje)
                                         <option value="{{ $eje->id_eje }}">{{ $eje->nombre_eje }}</option>
                                     @endforeach
                                 </select>
@@ -244,83 +219,91 @@
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener('click', function(event) {
-            const btn = event.target.closest('.edit-pnd-btn');
+    @push('scripts')
+        <script>
+            document.addEventListener('click', function(event) {
+                const btn = event.target.closest('.edit-pnd-btn');
 
-            if (btn) {
-                // 1. Extraer datos
-                const id = btn.getAttribute('data-id');
-                const codigo = btn.getAttribute('data-codigo');
-                const descripcion = btn.getAttribute('data-descripcion');
+                if (btn) {
+                    // 1. Extraer datos
+                    const id = btn.getAttribute('data-id');
+                    const codigo = btn.getAttribute('data-codigo');
+                    const descripcion = btn.getAttribute('data-descripcion');
 
-                const inputDes = document.getElementById('edit_pnd_descripcion');
-                if (inputDes) {
-                    // Probamos primero con .value, y si no, con .innerHTML
-                    inputDes.value = descripcion || '';
-                    //console.log("Descripción cargada:", descripcion); // Mira si esto sale en F12
-                }
-                const eje = btn.getAttribute('data-eje');
-                const inicio = btn.getAttribute('data-inicio');
-                const fin = btn.getAttribute('data-fin');
-                const estado = btn.getAttribute('data-estado');
-                const inEst = document.getElementById('edit_pnd_estado');
-                if (inEst) inEst.value = estado;
-
-                const ejeId = btn.getAttribute('data-eje');
-                const selectEje = document.getElementById('edit_pnd_eje');
-
-                if (selectEje) {
-                    selectEje.value = ejeId;
-                }
-                // 2. Referencias e Inyección
-                document.getElementById('formEditPnd').action = "/configuracion/pnd/" + id;
-                document.getElementById('edit_pnd_codigo').value = codigo;
-                document.getElementById('edit_pnd_descripcion').value = descripcion;
-                document.getElementById('edit_pnd_eje').value = eje;
-                document.getElementById('edit_pnd_inicio').value = inicio;
-                document.getElementById('edit_pnd_fin').value = fin;
-                document.getElementById('edit_pnd_estado').value = estado;
-
-
-                // Actualizar etiqueta del código en el título si la tienes
-                const label = document.getElementById('label_codigo_pnd');
-                if (label) label.innerText = codigo;
-            }
-        });
-        document.addEventListener('click', function(event) {
-            const deleteBtn = event.target.closest('.btn-delete');
-
-            if (deleteBtn) {
-                event.preventDefault(); // Evita el envío inmediato
-                const form = deleteBtn.closest('.form-eliminar');
-
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: "El registro se marcará como eliminado.",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#e74a3b', // Rojo Bootstrap
-                    cancelButtonColor: '#858796', // Gris Bootstrap
-                    confirmButtonText: 'Sí, eliminar',
-                    cancelButtonText: 'Cancelar',
-                    reverseButtons: true
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        form.submit(); // Envía el formulario si confirmó
+                    const inputDes = document.getElementById('edit_pnd_descripcion');
+                    if (inputDes) {
+                        // Probamos primero con .value, y si no, con .innerHTML
+                        inputDes.value = descripcion || '';
+                        //console.log("Descripción cargada:", descripcion); // Mira si esto sale en F12
                     }
-                });
-            }
-        });
-    </script>
-    @if (session('success'))
-        Swal.fire({
-        icon: 'success',
-        title: '¡Hecho!',
-        text: "{{ session('success') }}",
-        timer: 3000,
-        showConfirmButton: false
-        });
-    @endif
+                    const eje = btn.getAttribute('data-eje');
+                    const inicio = btn.getAttribute('data-inicio');
+                    const fin = btn.getAttribute('data-fin');
+                    const estado = btn.getAttribute('data-estado');
+                    const inEst = document.getElementById('edit_pnd_estado');
+                    if (inEst) inEst.value = estado;
+
+                    const ejeId = btn.getAttribute('data-eje');
+                    const selectEje = document.getElementById('edit_pnd_eje');
+
+                    if (selectEje) {
+                        selectEje.value = ejeId;
+                    }
+                    // 2. Referencias e Inyección
+                    document.getElementById('formEditPnd').action = "/configuracion/pnd/" + id;
+                    document.getElementById('edit_pnd_codigo').value = codigo;
+                    document.getElementById('edit_pnd_descripcion').value = descripcion;
+                    document.getElementById('edit_pnd_eje').value = eje;
+                    document.getElementById('edit_pnd_inicio').value = inicio;
+                    document.getElementById('edit_pnd_fin').value = fin;
+                    document.getElementById('edit_pnd_estado').value = estado;
+
+
+                    // Actualizar etiqueta del código en el título si la tienes
+                    const label = document.getElementById('label_codigo_pnd');
+                    if (label) label.innerText = codigo;
+                }
+            });
+            document.addEventListener('click', function(event) {
+                const deleteBtn = event.target.closest('.btn-delete');
+
+                if (deleteBtn) {
+                    event.preventDefault(); // Evita el envío inmediato
+                    const form = deleteBtn.closest('.form-eliminar');
+
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: "El registro se marcará como eliminado.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74a3b', // Rojo Bootstrap
+                        cancelButtonColor: '#858796', // Gris Bootstrap
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // Envía el formulario si confirmó
+                        }
+                    });
+                }
+            });
+            // 3. Cerrar alerta automáticamente
+            document.addEventListener('DOMContentLoaded', function() {
+                const alerta = document.getElementById('alerta-exito');
+                if (alerta) {
+                    setTimeout(() => {
+                        alerta.style.transition = "opacity 0.5s ease";
+                        alerta.style.opacity = "0";
+                        setTimeout(() => {
+                            alerta.remove();
+                        }, 500);
+                    }, 3000);
+                }
+            });
+        </script>
+    @endpush
+
 @endsection

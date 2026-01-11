@@ -7,13 +7,13 @@
             <h1 class="h3 fw-bold text-dark">Nueva Institución</h1>
             <p class="text-muted mb-0">Registro de entidad y asignación de jerarquía.</p>
         </div>
-        <a href="{{ route('estrategico.organizaciones.index') }}" class="btn btn-outline-secondary">
+        <a href="{{ route('institucional.organizaciones.index') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Regresar
         </a>
     </div>
 
     {{-- IMPORTANTE: enctype agregado para permitir subir archivos --}}
-    <form action="{{ route('estrategico.organizaciones.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('institucional.organizaciones.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         <div class="row">
@@ -235,7 +235,7 @@
 
                 if (id) {
                     // URL para Sectores
-                    let url = "{{ route('estrategico.api.sectores', ':id') }}";
+                    let url = "{{ route('institucional.api.sectores', ':id') }}";
                     url = url.replace(':id', id);
 
                     fetch(url)
@@ -265,7 +265,7 @@
 
                 if (id) {
                     // URL para Subsectores
-                    let url = "{{ route('estrategico.api.subsectores', ':id') }}";
+                    let url = "{{ route('institucional.api.subsectores', ':id') }}";
                     url = url.replace(':id', id);
 
                     fetch(url)

@@ -10,6 +10,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+         $this->call([
+            UsuarioPrincipalSeeder::class,
+            MetaPndSeeder::class,
+        ]);
         // 1. DESACTIVAR REGLAS DE SEGURIDAD
         Schema::disableForeignKeyConstraints();
 

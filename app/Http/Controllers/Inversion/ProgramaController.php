@@ -3,109 +3,120 @@
 namespace App\Http\Controllers\Inversion;
 
 use App\Http\Controllers\Controller;
+use App\Models\Planificacion\Programa;
+use App\Models\Planificacion\ObjetivoEstrategico;
+use App\Models\Inversion\FuenteFinanciamiento;
 use Illuminate\Http\Request;
-use App\Models\Inversion\Programa; // Asegúrate de que el modelo esté aquí
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ProgramaController extends Controller
 {
     /**
-     * Muestra el listado de programas.
+     * Listado de programas con carga de relaciones para optimizar la tabla.
      */
     public function index()
     {
-        // USAMOS PAGINATE en lugar de all() para que no colapse la tabla
-        $programas = Programa::orderBy('id_programa', 'desc')->paginate(10);
-
-        // CORRECCIÓN: Apuntamos a la nueva carpeta de vistas
-        return view('inversion.programas.index', compact('programas'));
+        // Cargamos relaciones para evitar el error N+1 en la tabla
+        $programas = Programa::with(['objetivoE', 'fuenteFinanciamiento'])
+            ->orderBy('anio_inicio', 'desc')
+            ->paginate(10);
+            //Preguntamos si teiene objetivos estrategicos
+        $tieneObjetivos = ObjetivoEstrategico::count() > 0;
+        return view('dashboard.inversion.programas.index', compact('programas', 'tieneObjetivos'));
     }
 
     /**
-     * Muestra el formulario para crear un nuevo programa.
+     * Formulario de creación: enviamos los catálogos necesarios.
      */
     public function create()
     {
-        // CORRECCIÓN: Apuntamos a la nueva carpeta de vistas
-        return view('inversion.programas.create');
+        $fuentes = FuenteFinanciamiento::all();
+        $idOrganizacionUsuario = Auth::user()->id_organizacion;
+        $objetivosEstrategicos = ObjetivoEstrategico::where('id_organizacion', $idOrganizacionUsuario)
+            ->where('estado', 1)
+            ->get();
+        if ($objetivosEstrategicos->isEmpty()) {
+            return redirect()->route('estrategico.objetivos.index')->with('Erro: Registre sus objetivos estrategicos');
+        }
+
+        return view('dashboard.inversion.programas.crear', compact('objetivosEstrategicos', 'fuentes'));
     }
 
     /**
-     * Almacena el recurso en la base de datos (tra_programa).
-     */
-    /**
-     * Almacena el recurso en la base de datos.
+     * Guardar el nuevo programa con validación técnica.
      */
     public function store(Request $request)
     {
-        // 1. VALIDACIÓN DE DATOS
         $request->validate([
-            'nombre_programa'   => 'required|max:255',
-            'codigo_cup'        => 'required|unique:tra_programa,codigo_cup',
-            'monto_planificado' => 'required|numeric',
-            // Agrega aquí validaciones para anio_inicio, anio_fin si son obligatorios
+            'codigo_cup'            => 'required|unique:tra_programa,codigo_cup|max:20',
+            'nombre_programa'       => 'required|string|max:255',
+            'anio_inicio'           => 'required|integer|min:2020',
+            'anio_fin'              => 'required|integer|gte:anio_inicio',
+            'monto_planificado'     => 'required|numeric|min:0',
+            'id_fuente'             => 'required|exists:cat_fuente_financiamiento,id_fuente',
+            'id_objetivo_estrategico' => 'required|exists:tra_objetivo_estrategico,id_objetivo_estrategico',
+            'cobertura'             => 'required|in:NACIONAL,ZONAL,PROVINCIAL,CANTONAL',
         ]);
 
-        // 2. PREPARACIÓN DE DATOS
-        // Tomamos todos los datos que vienen del formulario
-        $datos = $request->all();
+        try {
+            DB::beginTransaction();
 
-        // --- AQUÍ ESTÁ LA MAGIA ---
-        // Inyectamos manualmente el ID del usuario conectado en el campo 'registrado_by'
-        $datos['registrado_by'] = auth()->id();
+            $programa = new Programa();
+            $programa->codigo_cup = $request->codigo_cup;
+            $programa->nombre_programa = $request->nombre_programa;
+            $programa->descripcion = $request->descripcion;
+            $programa->anio_inicio = $request->anio_inicio;
+            $programa->anio_fin = $request->anio_fin;
+            $programa->monto_planificado = $request->monto_planificado;
+            $programa->id_fuente = $request->id_fuente;
+            $programa->id_objetivo_estrategico = $request->id_objetivo_estrategico;
+            $programa->cobertura = $request->cobertura;
+            $programa->estado = 'POSTULADO'; // Estado inicial por defecto
 
-        // 3. GUARDAR EN BASE DE DATOS
-        // Usamos el array $datos (que ya tiene el ID del usuario)
-        Programa::create($datos);
+            // Asignamos la organización del usuario que crea el programa
+            $programa->id_organizacion = Auth::user()->id_organizacion;
 
-        // 4. REDIRECCIÓN
-        return redirect()->route('inversion.programas.index')
-            ->with('status', 'Programa registrado exitosamente.');
+            $programa->save();
+
+            DB::commit();
+            return redirect()->route('inversion.programas.index')
+                ->with('status', 'Programa registrado exitosamente en el PAI.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al registrar el programa: ' . $e->getMessage())->withInput();
+        }
     }
 
     /**
-     * Muestra el formulario para editar (Faltaba este método).
+     * Formulario de edición.
      */
     public function edit($id)
     {
         $programa = Programa::findOrFail($id);
-        return view('inversion.programas.edit', compact('programa'));
+        $objetivosEstrategicos = ObjetivoEstrategico::all();
+        $fuentes = FuenteFinanciamiento::all();
+
+        return view('inversion.programas.edit', compact('programa', 'objetivosEstrategicos', 'fuentes'));
     }
 
     /**
-     * Actualiza el registro (Faltaba este método).
+     * Actualización con lógica de auditoría automática (vía Trait).
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'nombre_programa'   => 'required|max:255',
-            'codigo_cup'        => 'required|unique:tra_programa,codigo_cup,'.$id, // Ignora su propio ID
-            'monto_planificado' => 'required|numeric',
-        ]);
-
         $programa = Programa::findOrFail($id);
 
-        $datos = $request->all();
+        $request->validate([
+            'codigo_cup' => 'required|max:20|unique:tra_programa,codigo_cup,' . $id . ',id_programa',
+            'nombre_programa' => 'required|string|max:255',
+            'monto_planificado' => 'required|numeric|min:0',
+            'id_fuente' => 'required|exists:cat_fuente_financiamiento,id_fuente',
+        ]);
 
-        // SI TIENES UN CAMPO PARA AUDITAR EDICIONES:
-        // $datos['modificado_by'] = auth()->id();
-
-        $programa->update($datos);
+        $programa->update($request->all());
 
         return redirect()->route('inversion.programas.index')
             ->with('status', 'Programa actualizado correctamente.');
-    }
-
-    /**
-     * Elimina (Soft Delete) el registro.
-     */
-    public function destroy($id)
-    {
-        $programa = Programa::findOrFail($id);
-
-        // SoftDeletes se encarga automáticamente si está en el Modelo
-        $programa->delete();
-
-        return redirect()->back()
-            ->with('status', 'Programa enviado a la papelera correctamente.');
     }
 }

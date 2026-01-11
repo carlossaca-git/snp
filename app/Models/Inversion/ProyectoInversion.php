@@ -2,27 +2,32 @@
 
 namespace App\Models\Inversion;
 
+use App\Models\Catalogos\EjePnd;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-use App\Models\Inversion\Programa;
+// Importaciones correctas según tus módulos
+use App\Models\Planificacion\Programa;
 use App\Models\Inversion\ProyectoLocalizacion;
 use App\Models\Inversion\Financiamiento;
-use App\Models\Estrategico\OrganizacionEstatal;
+use App\Models\Institucional\OrganizacionEstatal;
+use App\Models\Catalogos\ObjetivoNacional; // Módulo 1
+use App\Models\Institucional\UnidadEjecutora;
+use App\Traits\Auditable;
 
 class ProyectoInversion extends Model
-{
+{   use Auditable;
     use HasFactory, SoftDeletes;
 
-    // 1. Nombre exacto de la tabla en la DB
     protected $table = 'tra_proyecto_inversion';
+    protected $primaryKey = 'id';
 
-    // 2. Campos que permitimos llenar masivamente (Mass Assignment)
     protected $fillable = [
         'id_programa',
         'cup',
         'nombre_proyecto',
+        'id_unidad_ejecutora',
         'descripcion_diagnostico',
         'tipo_inversion',
         'fecha_inicio_estimada',
@@ -30,10 +35,13 @@ class ProyectoInversion extends Model
         'duracion_meses',
         'monto_total_inversion',
         'estado_dictamen',
+        'id_organizacion',
+        'objetivo_nacional',
+        'provincia',
+        'canton',
+        'parroquia',
+        'estado'
     ];
-
-    // 3. Conversión de tipos (Casting)
-    // Esto asegura que Laravel trate las fechas como objetos Carbon y los números como decimales
     protected $casts = [
         'fecha_inicio_estimada' => 'date',
         'fecha_fin_estimada'    => 'date',
@@ -41,39 +49,48 @@ class ProyectoInversion extends Model
     ];
 
     /**
-     * RELACIONES
+     * RELACIONES DIRECTAS
      */
 
-    // Un Proyecto pertenece a un Programa
+    // Un Proyecto pertenece a una Organización (Ministerio/GAD)
+    public function organizacion()
+    {
+        return $this->belongsTo(OrganizacionEstatal::class, 'id_organizacion', 'id_organizacion');
+    }
+
+    // Un Proyecto se alinea a un Objetivo Nacional
+    public function objetivo()
+    {
+        return $this->belongsTo(ObjetivoNacional::class, 'objetivo_nacional', 'id_objetivo_nacional');
+    }
+
     public function programa()
     {
-        // El segundo parámetro es la llave foránea en ESTA tabla
         return $this->belongsTo(Programa::class, 'id_programa');
     }
 
-    // Un Proyecto puede tener muchas localizaciones (Provincia, Cantón, Parroquia)
-    public function localizaciones()
+    public function localizacion()
     {
-        return $this->hasMany(ProyectoLocalizacion::class, 'id_proyecto');
+        return $this->hasOne(ProyectoLocalizacion::class, 'id_proyecto', 'id');
     }
-
-    // Un Proyecto puede tener varios registros de financiamiento (por año/fuente)
+    // Relación: Un proyecto tiene muchos registros de financiamiento (uno por cada año)
     public function financiamientos()
     {
-        return $this->hasMany(Financiamiento::class, 'id_proyecto');
+        return $this->hasMany(Financiamiento::class, 'id_proyecto', 'id');
     }
-    // app/Models/Inversion/ProyectoInversion.php
-
-public function organizacion()
+    public function eje()
+    {
+        // Sintaxis: belongsTo(Modelo, 'FK_en_esta_tabla', 'PK_en_la_otra_tabla')
+        return $this->belongsTo(EjePnd::class, 'id_eje', 'id_eje');
+    }
+    public function unidadEjecutora()
+    {
+        // Modelo Padre
+        // La columna en ESTA tabla que sirve de unión
+        return $this->belongsTo(UnidadEjecutora::class, 'id_unidad_ejecutora');
+    }
+    public function documentos()
 {
-    // El Proyecto tiene una organización A TRAVÉS del Programa
-    return $this->hasOneThrough(
-        OrganizacionEstatal::class,
-        Programa::class,
-        'id', // Llave foránea en Programa (id del programa)
-        'id', // Llave foránea en Organizacion (id de la organizacion)
-        'id_programa', // Llave local en Proyecto
-        'id_organizacion' // Llave local en Programa
-    );
+    return $this->hasMany(DocumentoProyecto::class, 'id_proyecto');
 }
 }

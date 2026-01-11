@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use App\Models\Estrategico\TipoOrganizacion;
+use App\Models\Institucional\TipoOrganizacion;
 
 class TipoOrganizacionSeeder extends Seeder
 {

@@ -27,4 +27,9 @@ class Financiamiento extends Model
     {
         return $this->belongsTo(ProyectoInversion::class, 'id_proyecto');
     }
+    // Relación: Un registro de financiamiento pertenece a una Fuente
+    public function fuente()
+    {
+        return $this->belongsTo(FuenteFinanciamiento::class, 'id_fuente', 'id_fuente');
+    }
 }

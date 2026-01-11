@@ -11,14 +11,17 @@ class ProyectoLocalizacion extends Model
 {
     use SoftDeletes;
     protected $table = 'tra_proyecto_localizacion';
+    protected $primaryKey = 'id';
 
-    // No olvides que estos campos deben coincidir con tu migración
+
+    // Estos campos deben coincidir con tu migración
     protected $fillable = [
         'id_proyecto',
-        'codigo_provincia',
-        'codigo_canton',
-        'codigo_parroquia'
+        'provincia',
+        'canton',
+        'parroquia'
     ];
+
 
     public function proyecto()
     {

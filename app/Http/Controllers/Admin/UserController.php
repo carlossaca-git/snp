@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Rol;
+use App\Models\Institucional\OrganizacionEstatal;
+use App\Models\Seguridad\User;
+use App\Models\Seguridad\Rol;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\NuevoUsuarioCreado;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -18,10 +21,9 @@ class UserController extends Controller
      */
     public function index()
     {
-        $usuarios = User::with('roles')->orderBy('id_usuario', 'desc')->paginate(10);
+        $usuarios = User::with(['roles','organizacion'])->orderBy('id_usuario', 'desc')->paginate(10);
 
-        // 3. Vista actualizada: carpeta 'administracion/usuarios'
-        return view('administracion.usuarios.index', compact('usuarios'));
+        return view('dashboard.admin.usuarios.index', compact('usuarios'));
     }
 
     /**
@@ -30,7 +32,8 @@ class UserController extends Controller
     public function create()
     {
         $roles = Rol::all();
-        return view('administracion.usuarios.crear', compact('roles'));
+        $organizaciones = OrganizacionEstatal::all();
+        return view('dashboard.admin.usuarios.crear', compact('roles', 'organizaciones'));
     }
 
     /**
@@ -38,20 +41,25 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        // dd($request->all());
+
+        // 1. VALIDACIÓN ROBUSTA
         $request->validate([
-            'identificacion'     => 'required|unique:seg_usuario,identificacion',
-            'nombres'            => 'required|string',
-            'apellidos'          => 'required|string',
+            'identificacion'     => 'required|digits:10|unique:seg_usuario,identificacion',
+            'nombres'            => 'required|string|max:100',
+            'apellidos'          => 'required|string|max:100',
             'usuario'            => 'required|string|unique:seg_usuario,usuario',
-            'correo_electronico' => 'required|email|unique:seg_usuario,correo_electronico|confirmed',
-            'id_rol'             => 'required|exists:seg_rol,id_rol',
+            'correo_electronico' => 'required|email|unique:seg_usuario,correo_electronico',
             'password'           => 'required|confirmed|min:8',
+            'roles'              => 'required|array',
+            'roles.*'            => 'exists:seg_rol,id_rol',
+            'id_organizacion'    => 'required|exists:cat_organizacion_estatal,id_organizacion',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Crear Usuario
+            // 2. CREAR EL USUARIO
             $user = User::create([
                 'identificacion'     => $request->identificacion,
                 'nombres'            => $request->nombres,
@@ -59,28 +67,39 @@ class UserController extends Controller
                 'usuario'            => $request->usuario,
                 'correo_electronico' => $request->correo_electronico,
                 'password'           => Hash::make($request->password),
+                'id_organizacion'    => $request->id_organizacion,
+
+                // LÓGICA DE VERIFICACIÓN MANUAL
+                // se guarda la fecha actual. Si no, queda NULL.
+                'email_verified_at'  => $request->has('verificado') ? now() : null,
+                'estado'             => 1,
             ]);
 
-            // Asignar Rol
-            $user->roles()->attach($request->id_rol);
+            // 3. ASIGNAR ROLES
+            // Usamos $request->roles porque así se llama en la validación y en el formulario HTML
+            $user->roles()->attach($request->roles);
 
             DB::commit();
 
-            // Notificación
+            // 4. NOTIFICACIÓN (Opcional)
             try {
-                $user->notify(new NuevoUsuarioCreado($request->password, $user));
+                //  importar la clase: use App\Notifications\NuevoUsuarioCreado;
+                $user->notify(new \App\Notifications\NuevoUsuarioCreado($request->password, $user));
             } catch (\Exception $e) {
-                // Si falla el correo, no revertimos la creación del usuario, solo avisamos
-                // Opcional: Log::error('Fallo correo: ' . $e->getMessage());
+                Log::error('Error enviando correo de bienvenida: ' . $e->getMessage());
+                // No hacemos rollback porque el usuario SÍ se creó correctamente
             }
 
-            // 4. Redirección actualizada: 'administracion.usuarios.index'
             return redirect()->route('administracion.usuarios.index')
-                ->with('status', 'Usuario creado y notificación enviada.');
-
+                ->with('success', 'Usuario creado correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Error al guardar: ' . $e->getMessage()])->withInput();
+            // Log para que tú veas el error real en storage/logs/laravel.log
+            Log::error('Error creando usuario: ' . $e->getMessage());
+
+            return back()
+                ->withErrors(['error' => 'Ocurrió un error al guardar: ' . $e->getMessage()])
+                ->withInput();
         }
     }
 
@@ -92,9 +111,10 @@ class UserController extends Controller
     {
         $roles = Rol::all();
         $rolActual = $usuario->roles->first()?->id_rol;
+        $organizaciones = OrganizacionEstatal::all();
 
         // Pasamos la variable compactada como 'usuario' para que coincida con la ruta
-        return view('administracion.usuarios.editar', compact('usuario', 'roles', 'rolActual'));
+        return view('dashboard.admin.usuarios.editar', compact('usuario', 'roles', 'rolActual', 'organizaciones'));
     }
 
     /**
@@ -102,39 +122,56 @@ class UserController extends Controller
      */
     public function update(Request $request, User $usuario)
     {
+        //  VALIDACIÓN
         $request->validate([
-            'identificacion'     => ['required', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
-            'nombres'            => 'required|string|max:255',
-            'apellidos'          => 'required|string|max:255',
+            'identificacion'     => ['required', 'digits:10', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
+            'nombres'            => 'required|string|max:100',
+            'apellidos'          => 'required|string|max:100',
             'correo_electronico' => ['required', 'email', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
+
+            // Campos de Negocio
             'id_rol'             => 'required|exists:seg_rol,id_rol',
+            'id_organizacion'    => 'required|exists:cat_organizacion_estatal,id_organizacion',
+            'estado'             => 'required|in:1,0',
+
+            // Password opcional
             'password'           => 'nullable|confirmed|min:8',
         ]);
 
         try {
             DB::beginTransaction();
 
+            $fechaVerificacion = $request->has('verificado')
+                ? ($usuario->email_verified_at ?? now())
+                : null;
+
+            //  ACTUALIZAR DATOS BÁSICOS
             $usuario->update([
                 'identificacion'     => $request->identificacion,
                 'nombres'            => $request->nombres,
                 'apellidos'          => $request->apellidos,
                 'correo_electronico' => $request->correo_electronico,
+                'id_organizacion'    => $request->id_organizacion, // Actualizar entidad
+                'estado'             => $request->estado,          // Actualizar estado
+                'email_verified_at'  => $fechaVerificacion,        // Actualizar verificación
             ]);
 
+            //  ACTUALIZAR CONTRASEÑA (SOLO SI SE ESCRIBIÓ)
             if ($request->filled('password')) {
                 $usuario->update(['password' => Hash::make($request->password)]);
             }
 
+            //  ACTUALIZAR ROL
             $usuario->roles()->sync([$request->id_rol]);
 
             DB::commit();
 
             return redirect()->route('administracion.usuarios.index')
-                ->with('status', 'Usuario actualizado correctamente.');
+                ->with('success', 'Usuario actualizado correctamente.'); // Usa 'success' si tu layout usa esa variable
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Fallo al actualizar: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Fallo al actualizar: ' . $e->getMessage()])->withInput();
         }
     }
 
@@ -143,7 +180,7 @@ class UserController extends Controller
      */
     public function destroy(User $usuario)
     {
-        if (auth()->id() === $usuario->id_usuario) {
+        if (Auth::user() && Auth::user()->id_usuario === $usuario->id_usuario) {
             return back()->withErrors(['error' => 'No puedes eliminar tu propia cuenta administrativa.']);
         }
 
@@ -157,7 +194,6 @@ class UserController extends Controller
 
             return redirect()->route('administracion.usuarios.index')
                 ->with('status', 'Usuario eliminado correctamente.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Error al eliminar: ' . $e->getMessage()]);
