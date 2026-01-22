@@ -1,63 +1,51 @@
 @extends('layouts.app')
+<style>
+    .text-slate-800 {
+        color: #1e293b;
+    }
 
+    .text-slate-500 {
+        color: #64748b;
+    }
+
+    .card-clean {
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    }
+
+    .form-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .section-title {
+        border-left: 4px solid #3b82f6;
+        padding-left: 10px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 20px;
+    }
+</style>
 @section('content')
-    <style>
-        .text-slate-800 {
-            color: #1e293b;
-        }
-
-        .text-slate-500 {
-            color: #64748b;
-        }
-
-        .card-clean {
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-        }
-
-        .form-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 700;
-            color: #64748b;
-        }
-
-        .section-title {
-            border-left: 4px solid #3b82f6;
-            padding-left: 10px;
-            font-weight: bold;
-            color: #1e293b;
-            margin-bottom: 20px;
-        }
-    </style>
-
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 fw-bold text-slate-800 mb-1">Nuevo Programa de Inversión</h1>
-                <p class="text-slate-500 small mb-0">Registro en el Plan Anual de Inversiones (PAI)</p>
-            </div>
+    <x-layouts.header_content titulo="Nuevo Programa de Inversión" subtitulo="Registro en el Plan Anual de Inversiones">
+        <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ route('inversion.programas.index') }}" class="btn btn-outline-secondary btn-sm px-3">
                 <i class="fas fa-arrow-left me-1"></i> Cancelar y Volver
             </a>
         </div>
 
-        @if ($errors->any())
-            <div class="alert alert-danger border-0 shadow-sm mb-4">
-                <ul class="mb-0 small">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+    </x-layouts.header_content>
+    @include('partials.mensajes')
+    <div class="container-fluid py-4">
 
         <form action="{{ route('inversion.programas.store') }}" method="POST">
             @csrf
 
             <div class="row g-4">
-                {{-- SECCIÓN 1: DATOS GENERALES --}}
+                {{--  DATOS GENERALES --}}
                 <div class="col-lg-7">
                     <div class="card card-clean rounded-3 h-100">
                         <div class="card-body p-4">
@@ -66,7 +54,7 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Código CUP</label>
-                                    <input type="text" name="codigo_cup" value="{{ old('codigo_cup') }}"
+                                    <input type="text" name="cup" value="{{ old('cup') }}"
                                         class="form-control" placeholder="Ej: 2024-001" required>
                                     <small class="text-muted" style="font-size: 0.65rem;">Código Único de
                                         Proyecto/Programa</small>
@@ -87,7 +75,6 @@
                                     <label class="form-label">Sector de Inversión</label>
                                     <select name="id_sector" class="form-select" required>
                                         <option value="">Seleccione Sector...</option>
-                                        {{-- Aquí iterarías tus sectores: Social, Productivo, etc. --}}
                                         <option value="1">Social</option>
                                         <option value="2">Económico</option>
                                         <option value="3">Infraestructura</option>
@@ -107,8 +94,7 @@
                         </div>
                     </div>
                 </div>
-
-                {{-- SECCIÓN 2: TEMPORALIDAD Y PRESUPUESTO --}}
+                {{--  TIEMPO Y PRESUPUESTO --}}
                 <div class="col-lg-5">
                     <div class="card card-clean rounded-3 mb-4">
                         <div class="card-body p-4">
@@ -137,7 +123,7 @@
 
                                 <div class="col-12">
                                     <label class="form-label">Fuente de Financiamiento</label>
-                                    <select name="fuente_financiamiento" class="form-select" required>
+                                    <select name="id_fuente" class="form-select" required>
                                         <option value="">Seleccione una fuente...</option>
                                         @foreach ($fuentes as $fuente)
                                             <option value="{{ $fuente->id_fuente }}">
@@ -174,8 +160,8 @@
 
                 <div class="col-12 text-end">
                     <hr class="my-4">
-                    <button type="submit" class="btn btn-primary btn-lg shadow px-5">
-                        <i class="fas fa-save me-2"></i> Registrar Programa en el PAI
+                    <button type="submit" class="btn btn-success btn-lg shadow px-5">
+                        <i class="fas fa-save me-2"></i> Registrar
                     </button>
                 </div>
             </div>

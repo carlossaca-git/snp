@@ -14,7 +14,8 @@
                             <select name="id_meta" class="form-select" required>
                                 <option value="" selected disabled>-- Seleccione la Meta --</option>
                                 @foreach ($metas as $m)
-                                    <option value="{{ $m->id_meta }}">{{ $m->nombre_meta }}</option>
+                                    <option value="{{ $m->id_meta_nacional }}">
+                                        {{ $m->codigo_meta }}--{{ $m->nombre_meta }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -32,7 +33,8 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">Año Línea Base</label>
-                            <input type="number" name="anio_linea_base" class="form-control" placeholder="Anio 2023...">
+                            <input type="number" name="anio_linea_base" class="form-control"
+                                placeholder="Anio 2023...">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">Meta Final (Valor)</label>
@@ -83,9 +85,13 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <button type="submit" class="btn btn-dark">Guardar Indicador</button>
+                    <button type="submit" class="btn btn-success d-inline-flex align-items-center">
+                        <i class="fas fa-save me-1" data-feather="save"></i> Guardar
+                    </button>
+
                 </div>
             </div>
-        </form>
     </div>
+    </form>
+</div>
 </div>

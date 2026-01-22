@@ -2,22 +2,27 @@
 
 @section('content')
     <style>
-        .text-slate-800 { color: #1e293b; }
-        .card-clean { border: 1px solid #e2e8f0; box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); }
-    </style>
+        .text-slate-800 {
+            color: #1e293b;
+        }
 
-    <div class="container mx-auto py-5">
-        {{-- ENCABEZADO --}}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 fw-bold text-slate-800 mb-1">Editar Usuario</h1>
-                <p class="text-secondary mb-0">Actualización de datos para: <strong>{{ $usuario->usuario }}</strong></p>
-            </div>
-            <a href="{{ route('administracion.usuarios.index') }}" class="btn btn-outline-secondary shadow-sm d-inline-flex align-items-center">
-                <i data-feather="arrow-left" class="me-1"></i> Volver al Listado
+        .card-clean {
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+    </style>
+    <x-layouts.header_content titulo="Editar Usuario" subtitulo="Actualización de datos para: {{ $usuario->usuario }}">
+
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ route('administracion.usuarios.index') }}"
+                class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center">
+                <span data-feather="arrow-left"></span> Regresar
             </a>
         </div>
 
+    </x-layouts.header_content>
+
+    <div class="container mx-auto py-3">
         {{-- ALERTAS DE ERROR --}}
         @if ($errors->any())
             <div class="alert alert-danger shadow-sm border-0 mb-4">
@@ -49,13 +54,16 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-slate-800 small">Identificación</label>
-                            <input type="text" name="identificacion" value="{{ old('identificacion', $usuario->identificacion) }}"
+                            <input type="text" name="identificacion"
+                                value="{{ old('identificacion', $usuario->identificacion) }}"
                                 class="form-control @error('identificacion') is-invalid @enderror" required maxlength="13">
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-slate-800 small">Organización / Entidad</label>
-                            <select name="id_organizacion" class="form-select @error('id_organizacion') is-invalid @enderror" required>
+                            @if (auth()->user()->tieneRol('SUPER_ADMIN'))
+                            <select name="id_organizacion"
+                                class="form-select @error('id_organizacion') is-invalid @enderror" required>
                                 <option value="">Seleccione...</option>
                                 @foreach ($organizaciones as $org)
                                     <option value="{{ $org->id_organizacion }}"
@@ -64,6 +72,11 @@
                                     </option>
                                 @endforeach
                             </select>
+                            @else
+                             <input type="text" class="form-control"
+                                    value="{{ auth()->user()->organizacion->nom_organizacion }}" disabled>
+                                <input type="hidden" name="id_organizacion" value="{{ auth()->user()->id_organizacion }}">
+                            @endif
                         </div>
 
                         <div class="col-md-6">
@@ -80,11 +93,11 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-slate-800 small">Nombre de Usuario</label>
-                            <input type="text" value="{{ $usuario->usuario }}" class="form-control bg-light" readonly disabled
-                                title="El nombre de usuario no se puede modificar">
+                            <input type="text" value="{{ $usuario->usuario }}" class="form-control bg-light" readonly
+                                disabled title="El nombre de usuario no se puede modificar">
                         </div>
 
-                         <div class="col-md-6">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold text-slate-800 small">Perfil / Rol Asignado</label>
                             <select name="id_rol" class="form-select @error('id_rol') is-invalid @enderror" required>
                                 <option value="">Seleccione...</option>
@@ -95,7 +108,7 @@
                                 @foreach ($roles as $role)
                                     <option value="{{ $role->id_rol }}"
                                         {{ old('id_rol', $rolActualId) == $role->id_rol ? 'selected' : '' }}>
-                                        {{ $role->nombre }}
+                                        {{ $role->nombre_corto }}
                                     </option>
                                 @endforeach
                             </select>
@@ -103,7 +116,8 @@
 
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-slate-800 small">Correo Electrónico</label>
-                            <input type="email" name="correo_electronico" value="{{ old('correo_electronico', $usuario->correo_electronico) }}"
+                            <input type="email" name="correo_electronico"
+                                value="{{ old('correo_electronico', $usuario->correo_electronico) }}"
                                 class="form-control @error('correo_electronico') is-invalid @enderror" required>
                         </div>
 
@@ -129,7 +143,8 @@
 
                         <div class="col-12">
                             <hr class="my-4 text-muted">
-                            <h6 class="text-primary fw-bold"><i data-feather="lock" class="me-2" style="width:16px"></i>Seguridad</h6>
+                            <h6 class="text-primary fw-bold"><i data-feather="lock" class="me-2"
+                                    style="width:16px"></i>Seguridad</h6>
                             <div class="alert alert-light border small text-muted">
                                 <i data-feather="info" class="me-1" style="width:14px"></i>
                                 Deje los campos de contraseña <strong>vacíos</strong> si desea mantener la clave actual.
@@ -155,7 +170,8 @@
                     </div>
 
                     <div class="mt-5 pt-3 border-top text-end">
-                        <button type="submit" class="btn btn-warning px-5 shadow-sm text-dark fw-bold d-inline-flex align-items-center">
+                        <button type="submit"
+                            class="btn btn-warning px-5 shadow-sm text-dark fw-bold d-inline-flex align-items-center">
                             <i data-feather="save" class="me-2" style="width: 18px;"></i> Actualizar
                         </button>
                     </div>
@@ -178,7 +194,9 @@
 
             const passField = document.getElementById('password');
             passField.type = 'text';
-            setTimeout(() => { passField.type = 'password'; }, 5000);
+            setTimeout(() => {
+                passField.type = 'password';
+            }, 5000);
         }
 
         document.addEventListener('DOMContentLoaded', function() {

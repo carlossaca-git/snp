@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('seg_permiso', function (Blueprint $table) {
             $table->id('id_permiso');
-            $table->string('nombre', 100); // Ej: "Crear Proyectos de Inversión"
-            $table->string('slug', 100)->unique(); // Ej: "proyectos.crear"
+            $table->string('nombre_corto', 100); // Ej: "Crear Proyectos de Inversión"
+            $table->string('name', 100)->unique(); // Ej: "proyectos.crear"
             $table->string('descripcion', 255)->nullable();
             $table->timestamps();
         });

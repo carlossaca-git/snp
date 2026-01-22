@@ -1,25 +1,30 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="container-fluid py-4">
+    <x-layouts.header_content titulo="Detalle del Proyecto" subtitulo="Visualización completa de la ficha de inversión">
 
+        <a href="{{ route('inversion.proyectos.index') }}" class="btn btn-outline-secondary align-items-center"
+            title="Proyectos">
+            <i class="fas fa-home me-1"></i>Proyectos
+        </a>
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-arrow-left me-1"></i> Atras
+        </button>
+
+    </x-layouts.header_content>
+    <div class="container-fluid py-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="h3 text-gray-800 fw-bold">
-                    <i class="fas fa-folder-open text-primary me-2"></i>Detalle del Proyecto
-                </h1>
-                <p class="text-muted mb-0">Visualización completa de la ficha de inversión</p>
-            </div>
-            <div>
-                <a href="{{ route('reportes.proyecto.individual', $proyecto->id) }}" class="btn btn-outline-secondary me-2" target="_blank">
-                    <i class="fas fa-file-pdf me-2"></i>Reporte PDF
-                </a>
-                <a href="{{ route('inversion.proyectos.index') }}" class="btn btn-outline-secondary me-2">
-                    <i class="fas fa-arrow-left me-1"></i> Volver
-                </a>
-                <a href="{{ route('inversion.proyectos.edit', $proyecto->id) }}" class="btn btn-warning">
-                    <i class="fas fa-edit me-1"></i> Editar
-                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip"
+                    title="Ver Ficha Técnica"
+                    onclick="abrirVisorPdf('{{ route('reportes.proyecto.individual', $proyecto->id) }}')">
+                    <i class="fas fa-file-pdf"></i> Generar PDF
+                </button>
+                <button type="button">
+                    <a href="{{ route('inversion.proyectos.edit', $proyecto->id) }}" class="btn btn-warning  btn-sm">
+                        <i class="fas fa-edit me-1"></i> Editar
+                    </a>
+                </button>
             </div>
         </div>
         <div class="row">
@@ -182,18 +187,42 @@
                         <h5 class="fw-bold border-bottom border-white pb-2 mb-3 border-opacity-25">
                             <i class="fas fa-bullseye me-2"></i>Alineación PND
                         </h5>
-
                         <div class="mb-3">
-                            <small class="text-white-50 d-block text-uppercase fw-bold" style="font-size: 0.75rem;">Eje
-                                Estratégico</small>
-                            <p class="fw-bold mb-0">{{ $proyecto->objetivo->eje->nombre_eje ?? 'No definido' }}</p>
+                            <small class="text-white-50 d-block text-uppercase fw-bold" style="font-size: 0.75rem;">
+                                Objetivo Nacional
+                            </small>
+                            <p class="mb-0 lh-sm">
+                                @forelse($proyecto->objetivo->metasNacionales as $meta)
+                                    {{ $meta->objetivoNacional->descripcion_objetivo ?? 'Sin Objetivo Nacional' }}
+                                    @if (!$loop->last)
+                                        <br><span class="text-white-50">|</span>
+                                    @endif
+                                @empty
+                                    No definido
+                                @endforelse
+                            </p>
                         </div>
-
                         <div class="mb-0">
+                            <small class="text-white-50 d-block text-uppercase fw-bold" style="font-size: 0.75rem;">
+                                Meta Nacional Asociada
+                            </small>
+                            <p class="mb-0 lh-sm">
+                                @forelse($proyecto->objetivo->metasNacionales as $meta)
+                                    {{ $meta->nombre_meta }}
+
+                                    @if (!$loop->last)
+                                        <br><span class="text-white-50">|</span>
+                                    @endif
+                                @empty
+                                    No definido
+                                @endforelse
+                            </p>
+                        </div>
+                        <div class="mb-3">
                             <small class="text-white-50 d-block text-uppercase fw-bold"
-                                style="font-size: 0.75rem;">Objetivo
-                                Nacional</small>
-                            <p class="mb-0 lh-sm">{{ $proyecto->objetivo->descripcion_objetivo ?? 'No definido' }}</p>
+                                style="font-size: 0.75rem;">objetivo Estratégico</small>
+                            <p class="fw-bold mb-0">
+                                {{ $proyecto->objetivo->nombre ?? 'N/A' }}</p>
                         </div>
                     </div>
                 </div>
@@ -206,7 +235,7 @@
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
                             <div class="bg-light rounded-circle p-3 me-3 text-secondary">
-                                <i class="fas fa-building fa-lg" data-feather="trello"></i>
+                                <i class="fas fa-building fa-lg"></i>
                             </div>
                             <div>
                                 <small class="text-muted d-block">Unidad Ejecutora</small>
@@ -215,11 +244,10 @@
                             </div>
                         </div>
                         <hr class="mb-3">
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center mb-3">
                             <div class="bg-light rounded-circle p-3 me-3 text-secondary">
-                                <i class="fas fa-clipboard-check fa-lg" data-feather="clipboard"></i>
+                                <i class="fas fa-clipboard-check fa-lg"></i>
                             </div>
-
                             <div>
                                 <small class="text-muted d-block">Estado Dictamen</small>
                                 <span
@@ -232,6 +260,55 @@
 
                                     {{ $proyecto->estado_dictamen ?? 'PENDIENTE' }}
                                 </span>
+                            </div>
+                        </div>
+                        <hr class="mb-3">
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="bg-light rounded-circle p-3 me-3 text-secondary">
+                                    <i class="fas fa-tasks fa-2x fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h5 class="fw-bold mb-0">Marco Lógico</h5>
+                                    <small class="text-muted">Matriz de Planificación</small>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                {{--  Resumen de Estadísticas --}}
+                                <div class="d-flex justify-content-between text-muted small mb-3">
+                                    <span><i class="fas fa-layer-group me-1"></i>Componentes:</span>
+                                    <span
+                                        class="fw-bold">{{ $proyecto->marcoLogico->where('nivel', 'COMPONENTE')->count() }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small mb-3">
+                                    <span><i class="fas fa-check-square me-1"></i>Actividades:</span>
+                                    <span
+                                        class="fw-bold">{{ $proyecto->marcoLogico->where('nivel', 'ACTIVIDAD')->count() }}</span>
+                                </div>
+
+                                <hr class="my-3">
+
+                                {{-- Barra de Avance --}}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small class="fw-bold">Avance Físico Actual</small>
+                                        <small
+                                            class="fw-bold text-primary">{{ number_format($proyecto->avance_real, 1) }}%</small>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-primary" role="progressbar"
+                                            style="width: {{ $proyecto->avance_real }}%"></div>
+                                    </div>
+                                </div>
+
+                                {{-- Boton de acceso al modulo --}}
+                                <div class="d-grid">
+                                    <a href="{{ route('inversion.proyectos.marco-logico.index', ['id' => $proyecto->id]) }}"
+                                        class="btn btn-outline-primary fw-bold">
+                                        <i class="fas fa-edit me-2"></i>Gestionar Matriz
+                                    </a>
+                                </div>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -266,7 +343,7 @@
                                                 <i class="fas fa-eye me-1"></i> Ver documento
                                             </a>
 
-                                            <form action="{{ route('inversion.documentos.destroy', $doc->id) }}"
+                                            <form action="{{ route('inversion.proyectos.documentos.destroy', $doc->id) }}"
                                                 method="POST"
                                                 onsubmit="return confirm('¿Estás seguro de eliminar este archivo?')">
                                                 @csrf
@@ -294,7 +371,10 @@
             </div>
         </div>
     </div>
+
     <script>
         feather.replace();
     </script>
+@endsection
+@section('scripts')
 @endsection

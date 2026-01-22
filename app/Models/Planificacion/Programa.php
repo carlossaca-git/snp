@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Institucional\OrganizacionEstatal;
 use App\Models\Inversion\ProyectoInversion;
 use App\Models\Inversion\FuenteFinanciamiento;
+use App\Traits\Auditable;
 
 class Programa extends Model
 {
     use SoftDeletes;
+    use Auditable;
 
     protected $table = 'tra_programa';
     protected $primaryKey = 'id';
@@ -26,7 +28,8 @@ class Programa extends Model
         'id_objetivo_estrategico',
         'cobertura',
         'estado',
-        'id_organizacion'
+        'id_organizacion',
+        'id_plan'
     ];
 
     // Relación: Pertenece a un Plan

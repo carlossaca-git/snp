@@ -1,5 +1,5 @@
 <div class="modal fade" id="modalCrearOds" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg"> {{-- modal-lg para más espacio --}}
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">Registrar Nuevo ODS</h5>
@@ -10,10 +10,7 @@
             <form action="{{ route('catalogos.ods.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
-
-                    {{-- Fila 1: Código y Nombre --}}
                     <div class="row mb-3">
-                        <!-- Columna Código -->
                         <div class="col-md-4">
                             <label class="form-label fw-bold small">Código</label>
                             <div class="input-group">
@@ -22,22 +19,18 @@
                                     required min="1">
                             </div>
                         </div>
-
-                        <!-- Columna Nombre -->
                         <div class="col-md-8">
                             <label class="form-label fw-bold small">Nombre del Objetivo</label>
                             <input type="text" class="form-control" name="nombre"
                                 placeholder="Ej: Fin de la Pobreza" required>
                         </div>
-                    </div>
-                    {{-- Fila 2: Pilar, Color y Estado --}}
                     <div class="row mb-3">
                         <div class="col-md-5">
                             <label class="form-label fw-bold small">Pilar / Eje</label>
                             <select class="form-select @error('pilar') is-invalid @enderror" name="pilar">
                                 <option value="" selected disabled>Seleccione una opción...</option>
 
-                                {{-- LAS 5 P de la Agenda 2030 --}}
+                                {{-- Los 5 pilares de la Agenda 2030 --}}
                                 <option value="Personas" {{ old('pilar') == 'Personas' ? 'selected' : '' }}>Personas
                                     (Social)</option>
                                 <option value="Planeta" {{ old('pilar') == 'Planeta' ? 'selected' : '' }}>Planeta
@@ -48,8 +41,6 @@
                                 </option>
                                 <option value="Alianzas" {{ old('pilar') == 'Alianzas' ? 'selected' : '' }}>Alianzas
                                     (Transversal)</option>
-
-                                {{-- O si prefieres Ejes del PND, cambia los values de arriba --}}
                             </select>
                             @error('pilar')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -57,7 +48,6 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold small">Color Identificativo</label>
-                            {{-- Input de Color Nativo --}}
                             <input type="color" class="form-control form-control-color w-100" name="color_hex"
                                 value="#563d7c" title="Elige el color del ODS">
                         </div>
@@ -70,7 +60,7 @@
                         </div>
                     </div>
 
-                    {{-- Fila 3: Descripción --}}
+                    {{--  Descripción --}}
                     <div class="mb-3">
                         <label class="form-label fw-bold small">Descripción Detallada</label>
                         <textarea class="form-control" name="descripcion" rows="3"></textarea>

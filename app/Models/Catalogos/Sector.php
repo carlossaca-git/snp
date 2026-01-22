@@ -9,13 +9,19 @@ use App\Models\Catalogos\Macrosector;
 
 class Sector extends Model
 {
-    protected $table = 'cat_sector'; // Tu nombre real de tabla
-    protected $primaryKey = 'id_sector'; // Tu ID personalizado
+    protected $table = 'cat_sector';
+    protected $primaryKey = 'id_sector';
 
-    // Si tus tablas no tienen created_at/updated_at, pon esto en false:
+    protected $fillable = [
+        'id_macrosector',
+        'nombre_sector',
+        'siglas_sector',
+        'descripcion',
+        'estado'
+    ];
      public $timestamps = true;
 
-    // Relación inversa (opcional pero útil)
+    // Relación inversa
     public function macrosector() {
         return $this->belongsTo(Macrosector::class, 'id_macrosector');
     }

@@ -1,0 +1,13 @@
+/* Clase personalizada para efectos hover */
+.hover-primary {
+    transition: color 0.2s ease-in-out;
+    /* Suaviza el cambio de color */
+}
+
+.hover-primary:hover {
+    color: var(--bs-primary) !important;
+    /* Usa el azul oficial de tu tema */
+    text-decoration: underline !important;
+    /* Opcional: subraya al pasar el mouse */
+    cursor: pointer;
+}

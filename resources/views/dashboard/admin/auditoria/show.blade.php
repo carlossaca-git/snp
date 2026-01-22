@@ -11,7 +11,7 @@
         }
         .bg-light-gray { background-color: #f8fafc; }
 
-        /* ESTILOS DE LA TABLA COMPARATIVA (Con Color Definido) */
+        /* ESTILOS DE LA TABLA COMPARATIVA  */
         .table-diff th {
             font-weight: 600;
             font-size: 0.85rem;
@@ -22,21 +22,19 @@
 
         /* Valor Anterior: Rojo claro pero evidente */
         .diff-old {
-            background-color: #ffe5e5; /* Fondo Rojo */
-            color: #b91c1c;            /* Texto Rojo Oscuro */
+            background-color: #ffe5e5;
+            color: #b91c1c;
             border-right: 1px solid #fecaca;
         }
 
         /* Valor Nuevo: Verde claro pero evidente */
         .diff-new {
-            background-color: #d1e7dd; /* Fondo Verde (Estilo Bootstrap Success) */
-            color: #0f5132;            /* Texto Verde Oscuro */
+            background-color: #d1e7dd;
+            color: #0f5132;
         }
     </style>
 
     <div class="container-fluid py-4">
-
-        {{-- 1. ENCABEZADO SUPERIOR --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2 class="h4 fw-bold text-slate-800 mb-0">
@@ -44,12 +42,12 @@
                 </h2>
                 <p class="text-slate-500 small mb-0">Movimiento registrado: <strong>#{{ $auditoria->id_auditoria }}</strong></p>
             </div>
-            <a href="{{ route('auditoria.index') }}" class="btn btn-outline-secondary btn-sm px-3">
+            <a href="{{ route('administracion.auditoria.index') }}" class="btn btn-outline-secondary btn-sm px-3">
                 <i class="fas fa-arrow-left me-1"></i> Regresar
             </a>
         </div>
         <hr class="mb-3">
-        {{-- 2. TARJETA DE RESUMEN (Metadatos) --}}
+        {{--  RESUMEN  --}}
         <div class="card card-clean rounded-3 mb-4">
             <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="m-0 fw-bold text-slate-800">
@@ -58,7 +56,6 @@
             </div>
             <div class="card-body p-4">
                 <div class="row g-4">
-                    {{-- Columna Izquierda --}}
                     <div class="col-md-6 border-end">
                         <div class="mb-3">
                             <label class="text-xs text-uppercase text-slate-500 fw-bold d-block">Fecha y Hora</label>
@@ -90,8 +87,6 @@
                             <code class="text-dark bg-light px-2 py-1 rounded">{{ $auditoria->ip_address }}</code>
                         </div>
                     </div>
-
-                    {{-- Columna Derecha --}}
                     <div class="col-md-6 ps-md-4">
                         <div class="mb-3">
                             <label class="text-xs text-uppercase text-slate-500 fw-bold d-block">Módulo</label>
@@ -117,7 +112,7 @@
             </div>
         </div>
 
-        {{-- 3. TARJETA DE EVIDENCIA (Aquí están los colores fuertes) --}}
+        {{-- TARJETA DE EVIDENCIA  --}}
         <div class="card card-clean rounded-3">
             <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="m-0 fw-bold text-slate-800">
@@ -126,7 +121,7 @@
             </div>
             <div class="card-body p-0">
 
-                {{-- CASO 1: MODIFICACIÓN --}}
+                {{-- MODIFICACIÓN --}}
                 @if ($auditoria->accion == 'MODIFICAR')
                     <div class="p-3 bg-light border-bottom">
                         <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Comparativa: Izquierda (Valor Antiguo) vs Derecha (Valor Nuevo).</small>
@@ -189,7 +184,7 @@
                         </table>
                     </div>
 
-                {{-- CASO 2: CREACIÓN --}}
+                {{--  CREACIÓN --}}
                 @elseif($auditoria->accion == 'CREAR')
                     <div class="p-4">
                         <div class="alert alert-success d-flex align-items-center" role="alert">
@@ -210,7 +205,7 @@
                         </div>
                     </div>
 
-                {{-- CASO 3: ELIMINACIÓN --}}
+                {{-- ELIMINACIÓN --}}
                 @elseif($auditoria->accion == 'ELIMINAR')
                     <div class="p-4">
                         <div class="alert alert-danger d-flex align-items-center" role="alert">

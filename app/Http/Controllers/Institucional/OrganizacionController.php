@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Institucional;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage; // Importante para manejar archivos
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Validation\Rule;
 use App\Models\Institucional\OrganizacionEstatal;
@@ -12,6 +13,7 @@ use App\Models\Catalogos\Macrosector;
 use App\Models\Catalogos\Sector;
 use App\Models\Catalogos\Subsector;
 use App\Models\Institucional\TipoOrganizacion;
+use Exception;
 
 class OrganizacionController extends Controller
 {
@@ -20,42 +22,86 @@ class OrganizacionController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Limpiamos espacios en blanco por si acaso
-        $busqueda = trim($request->get('busqueda'));
+        $busqueda = trim($request->input('busqueda'));
 
-        // 2. Consulta BLINDADA
         $organizaciones = OrganizacionEstatal::query()
-            ->when($busqueda, function ($query) use ($busqueda) { // <--- ¡IMPORTANTE EL 'use'!
-
-                // Usamos un grupo (paréntesis) para que el OR no rompa otras reglas
-                return $query->where(function ($q) use ($busqueda) { // <--- ¡OTRA VEZ 'use'!
+            ->when($busqueda, function ($query) use ($busqueda) {
+                return $query->where(function ($q) use ($busqueda) {
                     $q->where('nom_organizacion', 'LIKE', "%{$busqueda}%")
                         ->orWhere('ruc', 'LIKE', "%{$busqueda}%")
                         ->orWhere('siglas', 'LIKE', "%{$busqueda}%");
                 });
             })
             ->orderBy('id_organizacion', 'DESC')
-            ->paginate(10); // Asegúrate de que este número sea igual al de tu vista
+            ->paginate(10);
 
-        // 3. Mantener el texto en la URL al pasar de página
         $organizaciones->appends(['busqueda' => $busqueda]);
 
         return view('dashboard.estrategico.organizaciones.index', compact('organizaciones'));
     }
     /**
      * Formulario de Creación
-     * CAMBIO: Ahora enviamos Macrosectores en lugar de Subsectores
+     * Ahora enviamos Macrosectores en lugar de Subsectores
      */
     public function create()
     {
-        // 1. Tipos de organización
+        $organizaciones = OrganizacionEstatal::orderBy('nom_organizacion', 'asc')->get();
+        //  Tipos de organización
         $tipos = TipoOrganizacion::where('estado', 1)->get();
 
-        // 2. Macrosectores (Para el primer Select de la cascada)
-        // Usamos 'nom_macrosector' o 'nombre' según tu BD. Asumo 'nombre' por la charla anterior.
+        // Macrosectores para el primer Select de la cascada
         $macrosectores = Macrosector::orderBy('nombre', 'asc')->get();
 
-        return view('dashboard.estrategico.organizaciones.crear', compact('tipos', 'macrosectores'));
+        return view(
+            'dashboard.estrategico.organizaciones.crear',
+            compact('tipos', 'macrosectores', 'organizaciones')
+        );
+    }
+
+    public function edit($id)
+    {
+        $organizacion = OrganizacionEstatal::with('subsector.sector.macrosector', 'padre')->findOrFail($id);
+        $macrosectores = Macrosector::all();
+        $tipos = TipoOrganizacion::all();
+
+        //Usamos optional para evitar errores si no hay subsector o sector.
+        $macrosector_actual = optional(optional($organizacion->subsector)->sector)->id_macrosector;
+        $sector_actual      = optional($organizacion->subsector)->id_sector;
+
+        // Cargamos las listas dependientes si existen datos previos
+        $sectores = [];
+        $subsectores = [];
+        $sector_actual = null;
+
+        //Cargamos dependicias si existen
+        if ($organizacion->subsector) {
+            // Si tiene subsector cargamos sus hermanos
+            $subsectores = Subsector::where('id_sector', $organizacion->subsector->id_sector)
+                ->orderBy('nombre', 'asc')->get();
+
+            if ($organizacion->subsector->sector) {
+                $sector_actual = $organizacion->subsector->sector;
+                // Si tiene sector cargamos los sectores hermanos
+                $sectores = Sector::where('id_macrosector', $sector_actual->id_macrosector)
+                    ->orderBy('nombre', 'asc')->get();
+            }
+        }
+        //Traemos todas las organizaciones excepto la que estamos editando
+        $organizaciones = OrganizacionEstatal::where('id_organizacion', '!=', $id)
+            ->orderBy('nom_organizacion', 'asc')
+            ->get();
+        return view(
+            'dashboard.estrategico.organizaciones.editar',
+            compact(
+                'organizacion',
+                'organizaciones',
+                'macrosectores',
+                'sectores',
+                'subsectores',
+                'sector_actual',
+                'tipos'
+            )
+        );
     }
 
     /**
@@ -89,8 +135,9 @@ class OrganizacionController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. VALIDACIÓN
-        $validated = $request->validate([
+        //dd($request->all());
+        //VALIDACIÓN
+        $request->validate([
             'nom_organizacion' => 'required|string|max:255',
             'siglas'           => 'nullable|string|max:20',
             'telefono'         => 'nullable|string|max:20',
@@ -101,54 +148,61 @@ class OrganizacionController extends Controller
                 'digits:13',
                 Rule::unique('cat_organizacion_estatal')->whereNull('deleted_at')
             ],
+            'id_padre'         => 'nullable|exists:cat_organizacion_estatal,id_organizacion',
             'id_subsector'     => 'required|exists:cat_subsector,id_subsector',
             'id_tipo_org'      => 'required|exists:cat_tipo_organizacion,id_tipo_org',
             'nivel_gobierno'   => 'required|string',
             'web'              => 'nullable|url',
             'email'            => 'nullable|email',
-            // NUEVO: Validación del Logo (Máx 10MB)
             'logo'             => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10240',
         ]);
+        DB::beginTransaction();
+        try {
+            //  CREAR INSTANCIA
+            $organizacion = new OrganizacionEstatal();
 
-        // 2. CREAR INSTANCIA
-        $organizacion = new OrganizacionEstatal();
-
-        // Asignación de campos
-        $organizacion->nom_organizacion = $request->nom_organizacion;
-        $organizacion->siglas           = $request->siglas;
-        $organizacion->ruc              = $request->ruc;
-        $organizacion->id_subsector     = $request->id_subsector;
-        $organizacion->id_tipo_org      = $request->id_tipo_org;
-        $organizacion->nivel_gobierno   = $request->nivel_gobierno;
-        $organizacion->mision           = $request->mision;
-        $organizacion->vision           = $request->vision;
-        $organizacion->web              = $request->web;
-        $organizacion->email            = $request->email;
-        $organizacion->telefono         = $request->telefono;
-        $organizacion->estado           = '1'; // Por defecto Activo
+            // Asignación de campos
+            $organizacion->nom_organizacion = $request->nom_organizacion;
+            $organizacion->siglas           = $request->siglas;
+            $organizacion->ruc              = $request->ruc;
+            $organizacion->id_subsector     = $request->id_subsector;
+            $organizacion->id_padre         = $request->id_padre;
+            $organizacion->id_tipo_org      = $request->id_tipo_org;
+            $organizacion->nivel_gobierno   = $request->nivel_gobierno;
+            $organizacion->mision           = $request->mision;
+            $organizacion->vision           = $request->vision;
+            $organizacion->web              = $request->web;
+            $organizacion->email            = $request->email;
+            $organizacion->telefono         = $request->telefono;
+            $organizacion->estado           = '1';
 
 
-        // Procesamos la imagen antes de guardar
-        if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('logos', 'public');
-            $organizacion->logo = $path;
+            // Procesamos la imagen antes de guardar
+            if ($request->hasFile('logo')) {
+                $path = $request->file('logo')->store('logos', 'public');
+                $organizacion->logo = $path;
+            }
+            // GUARDAR EN BD
+            $organizacion->save();
+
+            DB::commit();
+            return redirect()
+                ->route('institucional.organizaciones.index')
+                ->with('success', 'La Institución se ha registrado exitosamente.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->route('institucional.organizaciones.index')
+                ->with('error', 'No se pudo registrar la organizacion. Detalles: ' . $e->getMessage());
         }
-
-        // 4. GUARDAR EN BD
-        $organizacion->save();
-
-        return redirect()->route('institucional.organizaciones.index')
-            ->with('status', 'La Institución se ha registrado exitosamente.');
     }
     public function show($id)
     {
         // 1. CARGA PROFUNDA
         // cargamos la organizacion y sus objetivos
-        // cruza por la tabla de alineación y tráeme los nacionales, y de paso sus ODS".
+        //
         $organizacion = OrganizacionEstatal::with([
             'tipo',
             'subsector.sector',
-            // Aquí ocurre la magia del puente:
             'objetivos.objetivosNacionales.ods'
         ])->findOrFail($id);
 
@@ -185,7 +239,7 @@ class OrganizacionController extends Controller
             }
         }
 
-        // 3. PREPARAR ARRAYS PLANOS PARA JAVASCRIPT
+        // PREPARAR ARRAYS PLANOS PARA JAVASCRIPT
         $labels = [];
         $valores = [];
         $colores = [];
@@ -196,7 +250,7 @@ class OrganizacionController extends Controller
             $colores[] = $infoOds[$id]['color'];
         }
 
-        // 4. RETORNAR VISTA
+        // RETORNAR A LA VISTA
         return view('dashboard.estrategico.organizaciones.show', compact('organizacion', 'labels', 'valores', 'colores'));
     }
     /**
@@ -204,10 +258,11 @@ class OrganizacionController extends Controller
      **/
     public function update(Request $request, $id)
     {
-        // 1. Buscar la organización
+        //dd($request->all());
+        // Buscar la organización
         $organizacion = OrganizacionEstatal::findOrFail($id);
 
-        // 2. Validación (Ahora más permisiva: 10MB)
+        // Validación (Ahora más permisiva: 10MB)
         $request->validate([
             'nom_organizacion' => 'required|string|max:255',
             'siglas'           => 'nullable|string|max:50',
@@ -215,33 +270,61 @@ class OrganizacionController extends Controller
             'mision'           => 'nullable|string',
             'vision'           => 'nullable|string',
             'email'            => 'nullable|email',
+            Rule::unique('cat_organizacion_estatal', 'ruc')
+                ->ignore($id, 'id_organizacion')
+                ->whereNull('deleted_at'),
             'telefono'         => 'nullable|string',
+            'id_tipo_org'      => 'nullable|exists:cat_tipo_organizacion,id_tipo_org',
+            'nivel_gobierno'   => 'nullable|string',
             'logo'             => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:10240',
+            'id_subsector'     => 'required|exists:cat_subsector,id_subsector',
+            'id_padre'         => 'required|exists:cat_organizacion_estatal,id_organizacion',
+            'estado'           => 'required|boolean',
+
         ]);
+        DB::beginTransaction();
+        try {
 
-        // 3. Preparar datos básicos
-        $data = $request->except(['logo', '_token', '_method']);
+            // Preparar datos básicos
+            $data = $request->except([
+                'logo',
+                '_token',
+                '_method',
+                'id_macrosector',
+                'id_sector'
 
-        // 4. Manejo del Archivo (El código que ya sabemos que funciona)
-        if ($request->hasFile('logo')) {
+            ]);
+            $data['id_subsector'] = $request->input('id_subsector');
 
-            // A. Borrar logo anterior si existe
-            if ($organizacion->logo && Storage::disk('public')->exists($organizacion->logo)) {
-                Storage::disk('public')->delete($organizacion->logo);
+            // Si usas padre:
+            if ($request->has('id_padre')) {
+                $data['id_padre'] = $request->input('id_padre');
+            }
+            // Manejo del Archivo (El código que ya sabemos que funciona)
+            if ($request->hasFile('logo')) {
+
+                // Borrar logo anterior si existe
+                if ($organizacion->logo && Storage::disk('public')->exists($organizacion->logo)) {
+                    Storage::disk('public')->delete($organizacion->logo);
+                }
+                // Guardar el nuevo
+                $path = $request->file('logo')->store('logos', 'public');
+
+                // Asignar la ruta para guardar en BD
+                $data['logo'] = $path;
             }
 
-            // B. Guardar el nuevo
-            $path = $request->file('logo')->store('logos', 'public');
-
-            // C. Asignar la ruta para guardar en BD
-            $data['logo'] = $path;
+            // Actualizar en Base de Datos
+            $organizacion->update($data);
+            DB::commit();
+            return redirect()
+                ->route('institucional.organizaciones.index')
+                ->with('success', 'La Institución se ha registrado exitosamente.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->route('institucional.organizaciones.index')
+                ->with('error', 'No se pudo registrar la organizacion. Detalles: ' . $e->getMessage());
         }
-
-        // 5. Actualizar en Base de Datos
-        $organizacion->update($data);
-
-        // 6. Volver con mensaje
-        return redirect()->back()->with('status', 'Perfil y logo actualizados correctamente.');
     }
 
     /**

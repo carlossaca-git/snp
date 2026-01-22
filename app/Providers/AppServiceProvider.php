@@ -23,18 +23,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
-        Gate::before(function (User $user, string $ability) {
-            // Si el usuario tiene el rol de 'admin', siempre devuelve 'true' (Acceso Total)
+        Gate::before(function (User $user, $ability) {
+            // Si el usuario tiene el rol de 'admin', siempre devuelve 'true'
 
-            if ($user->rol === 'SUPERADMIN') {
+            if ($user->hasRole('SUPER_ADMIN')){
                 return true;
             }
         });
         // Definimos una "Puerta" llamada 'admin-access'
         Gate::define('admin-access', function (User $user) {
-            // Usamos el método que creamos en el modelo User anteriormente
-            // Verifica si en su tabla seg_rol existe el nombre 'Administrador'\
-           return $user->roles->contains('nombre_rol', 'SUPERADMIN');
+            // Verifica si en la tabla seg_rol existe el nombre 'Administrador'\
+           return $user->roles->contains('name', 'SUPER_ADMIN');
 
         });
         Paginator::useBootstrapFive();

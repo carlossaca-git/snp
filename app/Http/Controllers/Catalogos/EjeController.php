@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Catalogos;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use App\Models\Catalogos\EjePnd;
 use App\Models\Catalogos\PlanNacional;
 use Illuminate\Support\Facades\DB;
@@ -10,17 +10,44 @@ use Illuminate\Http\Request;
 
 class EjeController extends Controller
 {
+    public function __construct()
+    {
 
+        $this->middleware('auth');
+
+        //  Permiso de Lectura (Index y Show)
+        $this->middleware('permiso:ejes.ver')->only(['index', 'show']);
+
+        // Permiso de Escritura (Crear, Editar, Borrar)
+        $this->middleware('permiso:ejes.gestionar')->only([
+            'create',
+            'store',
+            'edit',
+            'update',
+            'destroy',
+            'vistaAvance',
+            'guardarAvance'
+        ]);
+    }
     /**
      * Muestra la lista de ejes con el conteo de sus objetivos relacionados.
      */
-    public function index()
+
+    public function index(Request $request)
     {
-        // El plan y los ejes asociados a el
-        $ejes = EjePnd::withCount('objetivosNacionales')
-                        ->orderBy('nombre_eje','desc')
-                        ->get();
+        //  Capturar texto de búsqueda
+        $busqueda = $request->input('busqueda');
+        $query = EjePnd::withCount('objetivosNacionales');
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('nombre_eje', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('descripcion', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('estado', 'LIKE', "%{$busqueda}%");
+            });
+        }
+        $ejes = $query->orderBy('nombre_eje', 'desc')->get();
         $planActivo = PlanNacional::where('estado', 1)->first();
+
         return view('dashboard.configuracion.ejes.index', compact('ejes', 'planActivo'));
     }
 
@@ -101,8 +128,6 @@ class EjeController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //dd($request->all());
-        // Ponemos los escudos de seguridad (Validación)
         $request->validate([
             'nombre_eje'  => 'required|string|max:150|unique:cat_eje_pnd,nombre_eje,' . $id . ',id_eje',
             'descripcion' => 'nullable|string|max:500',

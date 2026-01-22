@@ -2,18 +2,21 @@
 
 namespace App\Models\Seguridad;
 
-use App\Models\Institucional\OrganizacionEstatal;
+
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Spatie\Permission\Traits\HasRoles;
 use App\Traits\Auditable;
 
-
+use App\Models\Institucional\OrganizacionEstatal;
+use Illuminate\Support\Facades\Auth;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
+    use HasRoles;
     use Auditable;
 
     protected $table = 'seg_usuario';
@@ -84,22 +87,66 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function tieneRol($roles)
     {
-        // 1. Convertir a array si es un solo texto
+        // Convertir a array si es texto simple
         if (is_string($roles)) {
             $roles = [$roles];
         }
 
-        // 2. Obtener los nombres de los roles del usuario desde la relación
-        $misRoles = $this->roles->pluck('slug')->toArray();
+        // Cargamos los roles si no están cargados
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles');
+        }
 
-        // 3. LA LLAVE MAESTRA VISUAL:
-        if (in_array('SUPER_ADMIN', $misRoles) || in_array('SUPER_ADMIN', $misRoles)) {
+        // Obtenemos los name de los roles del usuario
+        $misRoles = $this->roles->pluck('name')->toArray();
+
+        //  LLAVE MAESTRA: Si soy SUPER_ADMIN, paso siempre
+        if (in_array('SUPER_ADMIN', $misRoles)) {
             return true;
         }
 
-        // 4. Verificar si alguno de los roles requeridos está en mis roles
+        // Verificamos coincidencia
         return count(array_intersect($misRoles, $roles)) > 0;
     }
     // Relación con Organización (para mostrar el nombre en el sidebar)
+    public function tienePermiso($permisoSlug)
+    {
+        // 1. Cargamos roles y sus permisos
+        if (!$this->relationLoaded('roles')) {
+            $this->load('roles.permisos');
+            //  Asegúrate que en tu modelo Rol.php tengas la relación public function permisos()
+        }
 
+        // Recorremos los roles
+        foreach ($this->roles as $rol) {
+
+            // Si el rol es SUPER_ADMIN, tiene permiso para todo
+            if ($rol->name === 'SUPER_ADMIN') {
+                return true;
+            }
+
+            // Buscamos el permiso dentro del rol
+            if ($rol->permisos->contains('name', $permisoSlug)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    //Scope para infiltrar usuarios por organizacion automaticamente
+    public function scopeDelMismoEntorno($query)
+    {
+        //Obtenemos el usuario logeado
+
+        $user = $this->getUsuario();
+        if ($user->tieneRol('SUPER_ADMIN')) {
+            return $query;
+        }
+        return $query ->where('id_organizacion', $user->id_organizacion);
+    }
+    private function getUsuario(): User
+    {
+        /** @var User */
+        return Auth::user();
+    }
 }

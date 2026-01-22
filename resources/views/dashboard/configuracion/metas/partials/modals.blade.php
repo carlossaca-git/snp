@@ -9,7 +9,7 @@
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('estrategico.alineacion.metas.vincular') }}" method="POST">
+            <form action="{{ route('catalogos.metas.vincular') }}" method="POST">
                 @csrf
                 <input type="hidden" name="id_meta_nacional" id="id_meta_ods_input">
                 <div class="modal-body">
@@ -42,41 +42,11 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save me-1"></i> Guardar
-                    </button>
-
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{{-- MODAL ACTUALIZAR VALORES --}}
-<div class="modal fade" id="modalSeguimiento" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="fas fa-chart-line me-2"></i>Seguimiento</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('catalogos.metas.actualizar') }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <input type="hidden" name="id_meta_nacional" id="id_meta_seguimiento">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nuevo Valor Actual</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" name="valor_actual" id="valor_actual_input"
-                                class="form-control form-control-lg text-center" required>
-                            <span class="input-group-text" id="unidad_medida_label"></span>
-                        </div>
-                        <small class="text-muted mt-2 d-block">Ingrese el dato más reciente medido para esta
-                            meta.</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-success w-100">Actualizar Avance</button>
+                    @if (Auth::user()->tienePermiso('metas_pnd.gestionar'))
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i> Guardar
+                        </button>
+                    @endif
                 </div>
             </form>
         </div>

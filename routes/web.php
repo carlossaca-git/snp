@@ -2,31 +2,38 @@
 
 use Illuminate\Support\Facades\Route;
 
-// 1. IMPORTACIÓN DE CONTROLADORES
+//  Dashboard y Perfil
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 
-// Módulo Administración
+//  Administración (Usuarios y Roles)
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\RolController;
 use App\Http\Controllers\Admin\AuditoriaController;
-// (Si tienes controlador de roles, impórtalo aquí)
 
-// Módulo Normativa (Catálogos)
+//  Catálogos y Normativa
 use App\Http\Controllers\Catalogos\OdsController;
 use App\Http\Controllers\Catalogos\ObjetivoNacionalController;
 use App\Http\Controllers\Catalogos\EjeController;
 use App\Http\Controllers\Catalogos\IndicadorController;
 use App\Http\Controllers\Catalogos\MetaNacionalController;
 use App\Http\Controllers\Catalogos\PlanNacionalController;
+use App\Http\Controllers\Catalogos\AvanceMetaController;
+use App\Http\Controllers\Catalogos\AvanceIndicadorController;
+use App\Http\Controllers\DashboardController as ControllersDashboardController;
+use App\Http\Controllers\DashboardController as HttpControllersDashboardController;
+use App\Models\Catalogos\MetaNacional;
 
-// Módulo Estratégico (Institucional y Planificación)
+//  Institucional y Planificación
 use App\Http\Controllers\Institucional\OrganizacionController;
 use App\Http\Controllers\Planificacion\AlineacionController;
 use App\Http\Controllers\Planificacion\ObjetivoEstrategicoController;
 
-// Módulo Inversión
+//  Inversión (Proyectos)
 use App\Http\Controllers\Inversion\ProgramaController;
 use App\Http\Controllers\Inversion\ProyectoController;
+use App\Http\Controllers\Inversion\MarcoLogicoController;
+use App\Http\Controllers\Planificacion\PlanInstitucionalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,15 +45,17 @@ Route::get('/', function () {
     return view('welcome');
 })->name('inicio');
 
+
 /*
 |--------------------------------------------------------------------------
-| RUTAS PROTEGIDAS (Middleware Auth)
+|           RUTAS PROTEGIDAS (Middleware Auth)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // --- COMUNES: DASHBOARD Y PERFIL ---
+    // ---  DASHBOARD Y PERFIL (Acceso para todos los logueados) ---
     Route::get('/principal', [DashboardController::class, 'index'])->name('dashboard');
+
 
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'edit')->name('profile.edit');
@@ -55,114 +64,186 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =========================================================================
-    // 1. BLOQUE ADMINISTRACIÓN Y NORMATIVA
+    //           ADMINISTRACIÓN DEL SISTEMA
     // =========================================================================
-    // Acceso principal: ADMIN_TI (El SuperAdmin entra por excepción en Middleware)
-    Route::middleware(['rol:ADMIN_TI'])->group(function () {
+    Route::middleware(['permiso:usuarios.gestionar'])->prefix('admin')->name('administracion.')->group(function () {
 
-        // 1.1 Gestión de Usuarios
-        Route::prefix('admin')->name('administracion.')->group(function () {
-            Route::resource('usuarios', UserController::class);
-            // Route::resource('roles', RoleController::class); // Si implementas roles
-        });
+        Route::resource('usuarios', UserController::class);
+        //Route::get('/perfil', [UserController::class, 'show'])->name('show');
+        Route::resource('roles', RolController::class);
 
-        // 1.2 Normativa Nacional (Catálogos PND/ODS)
-        // Aunque los Técnicos los LEEN, los Admins los GESTIONAN (CRUD)
-        Route::prefix('catalogos')->name('catalogos.')->group(function () {
-            Route::resource('ejes', EjeController::class);
-            Route::resource('pnd', ObjetivoNacionalController::class); // Objetivos Nacionales
-            Route::resource('ods', OdsController::class);
-            Route::resource('metas', MetaNacionalController::class);
-            Route::resource('indicadores', IndicadorController::class);
 
-            // Nota: 'except' destroy, porque acordamos no borrar físicamente
-            Route::resource('planes-nacionales', PlanNacionalController::class)->except(['destroy']);
-
-            // Ruta ESPECIAL para activar un plan (POST porque cambia estado)
-            Route::post('planes-nacionales/{id}/activar', [PlanNacionalController::class, 'activar'])
-                ->name('planes-nacionales.activar');
-        });
-        //
-        Route::post('/catalogos/metas/actualizar-avance', [MetaNacionalController::class, 'actualizarAvance'])
-            ->name('catalogos.metas.actualizar');
-    });
-
-    // =========================================================================
-    // 2. BLOQUE ESTRATÉGICO (FASE 1)
-    // =========================================================================
-    // Acceso: TECNICO_PLAN
-    Route::middleware(['rol:TECNICO_PLAN'])->group(function () {
-
-        // 2.1 Institucional (Ficha de la Entidad)
-        Route::prefix('institucional')->name('institucional.')->group(function () {
-            Route::resource('organizaciones', OrganizacionController::class);
-
-            // APIs para combos dependientes (Sectores/Subsectores)
-            Route::get('/api/sectores/{id_macrosector}', [OrganizacionController::class, 'getSectores'])->name('api.sectores');
-            Route::get('/api/subsectores/{id_sector}', [OrganizacionController::class, 'getSubsectores'])->name('api.subsectores');
-        });
-
-        // 2.2 Estrategia (Objetivos y Alineación)
-        // Agrupamos bajo 'estrategico' para orden en la URL
-        Route::prefix('estrategico')->name('estrategico.')->group(function () {
-
-            // A. Objetivos Institucionales (OEI) - ¡MOVIDO AQUÍ SEGÚN SIDEBAR!
-            Route::resource('objetivos', ObjetivoEstrategicoController::class);
-
-            // B. Alineación Estratégica (PND <-> OEI <-> ODS)
-            Route::prefix('alineacion')->name('alineacion.')->group(function () {
-
-                // Ruta para procesar la vinculación de ODS con Metas
-                Route::post('/catalogos/metas/vincular-ods', [MetaNacionalController::class, 'vincularOds'])
-                    ->name('metas.vincular');
-                // Vista Principal de Alineación
-                Route::get('/{organizacion_id}/gestionar', [AlineacionController::class, 'index'])->name('gestionar');
-
-                // Acciones
-                Route::post('/{organizacion_id}/guardar', [AlineacionController::class, 'store'])->name('guardar');
-                Route::post('/objetivos-ajax', [AlineacionController::class, 'storeObjetivoAjax'])->name('objetivos-ajax');
-                Route::put('/{id}/actualizar', [AlineacionController::class, 'update'])->name('actualizar');
-                Route::delete('/{id}/eliminar', [AlineacionController::class, 'destroy'])->name('eliminar');
-            });
+        // Auditoría (Permiso específico para auditar)
+        Route::prefix('auditoria')->name('auditoria.')->controller(AuditoriaController::class)->group(function () {
+            Route::get('/', 'index')->middleware('permiso:auditoria.ver')->name('index');
+            Route::get('/logs', 'logs')->name('logs');
+            Route::get('/{id}', 'show')->name('show');
         });
     });
 
     // =========================================================================
-    // 3. BLOQUE INVERSIÓN (FASE 2)
+    //           NORMATIVA Y CATALOGOS
     // =========================================================================
-    // Acceso: TECNICO_PLAN (Igual que arriba, pero separado por orden lógico)
-    Route::middleware(['rol:TECNICO_PLAN'])->prefix('inversion')->name('inversion.')->group(function () {
+    Route::middleware(['auth'])->prefix('catalogos')->name('catalogos.')->group(function () {
 
-        // 3.1 Cartera de Inversión
-        // Route::resource('planes', PlanAnualController::class); // Si tuvieras controlador de planes
+        Route::post('planes-nacionales/{plan}/activar', [PlanNacionalController::class, 'activar'])
+            ->name('planes-nacionales.activar');
+
+        // Estándar (index, create, store, show, edit, update)
+        Route::resource('planes-nacionales', PlanNacionalController::class);
+        // EJES
+        Route::resource('ejes', EjeController::class);
+        // OBJETIVOS
+        Route::resource('objetivos', ObjetivoNacionalController::class);
+        // ODS
+        Route::resource('ods', OdsController::class);
+        // METAS
+        Route::post('metas/vincular-ods', [MetaNacionalController::class, 'vincularOds'])
+            ->name('metas.vincular');
+        //Actualizar avances de metas
+        Route::post('metas/guardar-avance', [AvanceMetaController::class, 'store'])
+            ->name('metas.avances.store');
+        Route::post('metas/actualizar-avance', [MetaNacionalController::class, 'actualizarAvance'])
+            ->name('metas.actualizar');
+
+
+        // Estándar
+        Route::resource('metas', MetaNacionalController::class);
+        Route::resource('metas', MetaNacionalController::class)->except(['show']);
+        //Obtener metas a partir de su id esto es posible por la relacion padre a hijo
+        Route::get('api/obtener-metas/{id}', function ($id) {
+            $metas = MetaNacional::where('id_objetivo_nacional', $id)
+                ->select('id_meta_nacional', 'nombre_meta', 'codigo_meta')
+                ->get();
+            return response()->json($metas);
+        })->name('api.obtener_metas');
+
+
+        // INDICADORES
+        Route::get('indicadores/{id}/kardex', [IndicadorController::class, 'show'])
+            ->name('indicadores.kardex');
+        // Estándar
+        Route::resource('indicadores', IndicadorController::class);
+
+        //Actualizar avances de indicadores
+        Route::post('indicadores/guardar-avance', [AvanceIndicadorController::class, 'store'])
+            ->name('indicadores.avances.store');
+    });
+
+    // =========================================================================
+    //          ESTRATÉGICO:Institucional y Alineación
+    // =========================================================================
+    Route::prefix('institucional')->name('institucional.')->group(function () {
+
+        // Gestión de Organizaciones (Solo Admin Institucional o Super Admin)
+        Route::resource('organizaciones', OrganizacionController::class)
+            ->middleware('permiso:organizacion.editar');
+
+        // APIs JSON (Abiertas para que funcionen los selects dinámicos)
+        Route::get('/api/sectores/{id_macrosector}', [OrganizacionController::class, 'getSectores'])
+            ->name('api.sectores');
+        Route::get('/api/subsectores/{id_sector}', [OrganizacionController::class, 'getSubsectores'])
+            ->name('api.subsectores');
+    });
+
+    Route::prefix('estrategico')->name('estrategico.')->middleware(['permiso:planificacion.gestionar'])->group(function () {
+
+        // Recurso estándar para Objetivos
+        Route::resource('objetivos', ObjetivoEstrategicoController::class);
+        Route::get('/planes/{idPlan}/objetivos', [ObjetivoEstrategicoController::class, 'index'])
+            ->name('planificacion.objetivos.index');
+
+        // GRUPO 1: Alineación
+        Route::prefix('alineacion')->name('alineacion.')->controller(AlineacionController::class)->group(function () {
+            Route::resource('general', AlineacionController::class);
+            // Rutas personalizadas (Recomendado si usas URLs en español como 'gestionar')
+            Route::get('/{organizacion_id}/gestionar', 'index')->name('gestionar');
+            Route::post('/{organizacion_id}/guardar', 'store')->name('guardar');
+            Route::put('/{id}/actualizar', 'update')->name('actualizar');
+            Route::delete('/{id}/eliminar', 'destroy')->name('eliminar');
+
+            // Rutas adicionales
+            Route::post('/objetivos-ajax', 'storeObjetivoAjax')->name('objetivos-ajax');
+            Route::get('/{id}', 'show')->name('show');
+        });
+
+
+        Route::prefix('planificacion')->name('planificacion.')->controller(PlanInstitucionalController::class)->group(function () {
+            Route::resource('planes', PlanInstitucionalController::class);
+            Route::put('/planes/{id}/cerrar', [PlanInstitucionalController::class, 'cerrarPlan'])
+                ->name('planes.cerrar');
+        });
+    });
+
+    // =========================================================================
+    //           INVERSIÓN - PROYECTOS - GRANULARIDAD PURA
+    // =========================================================================
+    Route::prefix('inversion')->name('inversion.')->group(function () {
+
         Route::resource('programas', ProgramaController::class);
-        Route::resource('proyectos', ProyectoController::class);
-        // Route::resource('financiamiento', FinanciamientoController::class); // Si existiera
 
-        // 3.2 Rutas Auxiliares
-        Route::get('/proyectos/get-objetivos/{ejeId}', [ProyectoController::class, 'getObjetivos'])->name('proyectos.getObjetivos');
-        Route::delete('/documentos/{id}', [ProyectoController::class, 'eliminarDocumento'])->name('documentos.destroy');
+        // --- SUBMDULO DE PROYECTOS
+        Route::prefix('proyectos')->name('proyectos.')->controller(ProyectoController::class)
+            ->group(function () {
+
+                //  (Todos los técnicos y jefes)
+                Route::get('/', 'index')
+                    ->middleware('permiso:proyectos.ver')
+                    ->name('index');
+
+                // Crear Solo Jefes
+                Route::get('/create', 'create')->middleware('permiso:proyectos.crear')->name('create');
+                Route::post('/', 'store')->middleware('permiso:proyectos.crear')->name('store');
+
+                // Editar (Jefes y Técnicos designados)
+                Route::get('/{id}/edit', 'edit')->middleware('permiso:proyectos.editar')->name('edit');
+                Route::put('/{id}', 'update')->middleware('permiso:proyectos.editar')->name('update');
+
+                //  Eliminar (Solo Jefes o Admins)
+                Route::delete('/{id}', 'destroy')->middleware('permiso:proyectos.eliminar')->name('destroy');
+
+                //  Auxiliares
+                Route::get('/get-objetivos/{ejeId}', 'getObjetivos')
+                    ->name('getObjetivos');
+                Route::delete('/documentos/{id}', 'eliminarDocumento')
+                    ->name('documentos.destroy');
+                //Ver el perfil
+                Route::get('/{id}', 'show')
+                    ->middleware('permiso:proyectos.ver')
+                    ->name('show');
+
+                // Ruta para ver el tablero del Marco Lógico
+                Route::get('/{id}/marco-logico', [MarcoLogicoController::class, 'index'])
+                    ->name('marco-logico.index');
+                // Rutas para guardar elementos (Propósito, Componentes, Actividades)
+                Route::post('/marco-logico/guardar', [MarcoLogicoController::class, 'store'])
+                    ->name('marco-logico.store');
+                //Ruta para actualizar
+                Route::put('/marco-logico/{id}', [MarcoLogicoController::class, 'update'])
+                    ->name('marco-logico.update');
+                //Ruta para reportar avance
+                Route::post('/avance', [MarcoLogicoController::class, 'storeAvance'])
+                    ->name('registrar-avance.store');
+                //Ruta para eliminar
+                Route::delete('/marco-logico/{id}', [MarcoLogicoController::class, 'destroy'])
+                    ->name('marco-logico.destroy');
+            });
     });
 
     // =========================================================================
-    // 4. BLOQUE CONTROL Y REPORTES
+    //                  REPORTES (Solo lectura)
     // =========================================================================
+    Route::prefix('reportes')->name('reportes.')->middleware(['permiso:reportes.ver'])->group(function () {
+        Route::get('/proyectos-general', [DashboardController::class, 'reporteGeneral'])
+            ->name('proyectos.general');
 
-    // 4.1 Auditoría (Solo AUDITOR)
-    Route::middleware(['rol:AUDITOR'])->prefix('auditoria')->name('auditoria.')->group(function () {
-        Route::controller(AuditoriaController::class)->group(function () {
-            Route::get('/', 'index')->name('index');      // Dashboard Auditoría
-            Route::get('/logs', 'logs')->name('logs');    // Listado de Logs (si tienes el método)
-            Route::get('/{id}', 'show')->name('show');    // Detalle
-        });
-    });
+        Route::get('/proyecto/{id}', [ProyectoController::class, 'generarReporte'])
+            ->name('proyecto.individual');
 
-    // 4.2 Reportes (Acceso más abierto o restringido según necesites)
-    Route::prefix('reportes')->name('reportes.')->group(function () {
-        Route::get('/proyectos-general', [DashboardController::class, 'reporteGeneral'])->name('proyectos.general');
-        Route::get('/proyecto/{id}', [ProyectoController::class, 'generarReporte'])->name('proyecto.individual');
         Route::get('/filtrar', [DashboardController::class, 'filtrarDatos'])->name('dashboard.filtrar');
+        Route::get('/indicadores/{id}/pdf', [IndicadorController::class, 'generarPdf'])->name('catalogos.indicadores.pdf');
     });
 });
+
 
 require __DIR__ . '/auth.php';

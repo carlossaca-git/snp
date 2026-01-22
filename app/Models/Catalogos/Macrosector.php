@@ -34,8 +34,6 @@ class Macrosector extends Model
     // Ejemplo: El Macrosector "Social" tiene sectores "Salud", "Educación", etc.
     public function sectores(): HasMany
     {
-        // Como Sector está en el mismo Namespace (App\Models\Estrategico),
-        // no hace falta importarlo con 'use', Laravel lo detecta automáticamente.
         return $this->hasMany(Sector::class, 'id_macrosector');
     }
 

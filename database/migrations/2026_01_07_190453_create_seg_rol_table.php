@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('seg_rol', function (Blueprint $table) {
             $table->id('id_rol'); // Llave primaria
-            $table->string('nombre', 50)->unique(); // Nombre visible: "Administrador de TI"
-            $table->string('slug', 50)->unique();   // Referencia técnica: "ADMIN_TI"
+            $table->string('nombre_corto', 50)->unique(); // Nombre visible: "Administrador de TI"
+            $table->string('name', 50)->unique();   // Referencia técnica: "ADMIN_TI"
             $table->string('descripcion', 255)->nullable();
             $table->boolean('estado')->default(true); // Activo/Inactivo
             $table->timestamps();

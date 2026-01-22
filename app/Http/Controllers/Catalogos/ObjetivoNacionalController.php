@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Catalogos;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use App\Models\Catalogos\ObjetivoNacional;
 use App\Models\Catalogos\EjePnd;
 use App\Traits\Auditable;
@@ -15,21 +15,59 @@ use Illuminate\Support\Facades\Log;
 
 class ObjetivoNacionalController extends Controller
 {
+    public function __construct()
+    {
+        //  Protección Base Nadie entra sin estar logueado
+        $this->middleware('auth');
 
-    use Auditable;
-    use HasFactory;
-    use SoftDeletes;
+        //  Protección de LECTURA (Solo index y show)
+        $this->middleware('permiso:objetivos.ver')->only(['index', 'show']);
 
- /**
-     * Muestra la lista de objetivos del PND.
-     */ /**
+        //  Protección de ESCRITURA (Crear, Editar, Borrar)
+        $this->middleware('permiso:objetivos.gestionar')->only([
+            'create',
+            'store',
+            'edit',
+            'update',
+            'destroy'
+        ]);
+    }
+
+    /**
      * Muestra la lista de objetivos del PND.
      */
-    public function index()
+    /**
+     * Muestra la lista de objetivos del PND.
+     */
+    public function index(Request $request)
     {
-        // Traemos los objetivos nacionales.
-        $pnd = ObjetivoNacional::with('eje')->get();
+        // Capturamos el texto
+        $busqueda = $request->input('busqueda');
+
+        // Iniciamos la consulta cargando la relación 'eje'
+        $query = ObjetivoNacional::with('eje');
+
+        // Aplicamos filtros si hay búsqueda
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                // Búsqueda directa en la tabla objetivos
+                $q->where('codigo_objetivo', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('descripcion_objetivo', 'LIKE', "%{$busqueda}%")
+
+                    // Búsqueda en la tabla relacionada (Eje)
+                    ->orWhereHas('eje', function ($subQ) use ($busqueda) {
+                        $subQ->where('nombre_eje', 'LIKE', "%{$busqueda}%");
+                    });
+            });
+        }
+        // Ordenamos por código para que salgan 1, 2, 3...
+        $pnd = $query->orderBy('codigo_objetivo', 'asc')
+            ->paginate(10)
+            ->appends(['busqueda' => $busqueda]);
+
+        // Cargamos la lista de ejes para el MODAL de crear/editar (sin filtrar)
         $relEje = EjePND::where('estado', 1)->get();
+
         return view('dashboard.configuracion.pnd.index', compact('pnd', 'relEje'));
     }
 

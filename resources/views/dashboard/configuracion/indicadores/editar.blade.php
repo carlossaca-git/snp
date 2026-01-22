@@ -15,7 +15,8 @@
                             <label class="form-label fw-bold">Meta Nacional Vinculada</label>
                             <select name="id_meta" id="edit_id_meta" class="form-select" required>
                                 @foreach($metas as $m)
-                                    <option value="{{ $m->id_meta }}">{{ $m->nombre_meta }}</option>
+                                    <option value="{{ $m->id_meta_nacional }}">
+                                        {{$m->codigo_meta}}--{{ $m->nombre_meta }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -80,7 +81,7 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning fw-bold">Actualizar Indicador</button>
+                    <button type="submit" class="btn btn-warning fw-bold"><i class="fas fa-sync-alt me-1"></i> Actualizar</button>
                 </div>
             </div>
         </form>

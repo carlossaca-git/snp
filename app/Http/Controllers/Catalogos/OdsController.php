@@ -3,18 +3,49 @@
 namespace App\Http\Controllers\Catalogos;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 
+use Illuminate\Routing\Controller;
 use App\Models\Catalogos\Ods;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
 class OdsController extends Controller
 {
-    public function index()
+    //Metodo de seguridad
+    public function __construct()
     {
-        // Traemos todos los ODS ordenados por su número (1 al 17)
-        $ods = Ods::orderBy('id_ods', 'asc')->get();
+        //  Protección Base Nadie entra sin estar logueado
+        $this->middleware('auth');
+
+        //  Protección de LECTURA (Solo index y show)
+        $this->middleware('permiso:ods.ver')->only(['index', 'show']);
+
+        //  Protección de ESCRITURA (Crear, Editar, Borrar)
+        $this->middleware('permiso:ods.gestionar')->only([
+            'create',
+            'store',
+            'edit',
+            'update',
+            'destroy'
+        ]);
+    }
+    //Metodo index
+
+    public function index(Request $request)
+    {
+        $busqueda = $request->input('busqueda');
+
+        $query = Ods::query();
+
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('nombre', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('descripcion', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('codigo', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('pilar', 'LIKE', "%{$busqueda}%");
+            });
+        }
+        $ods = $query->orderBy('id_ods', 'asc')->get();
 
         return view('dashboard.configuracion.ods.index', compact('ods'));
     }
@@ -32,7 +63,6 @@ class OdsController extends Controller
 
     public function store(Request $request)
     {
-        //dd($request->all());
         $validated = $request->validate([
             'codigo'        => 'required|string|max:20|unique:cat_ods,codigo',
             'nombre'        => 'required|string|max:255',
@@ -45,7 +75,6 @@ class OdsController extends Controller
         ]);
         DB::beginTransaction();
         try {
-            //Ods::create($request->all());
             $ods = new ODS();
             $ods->codigo      = 'ODS-' . $request->codigo;
             $ods->nombre      = $request->nombre;
@@ -61,7 +90,7 @@ class OdsController extends Controller
                 ->with('success', 'ODS creado correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
-            // Retorna ERROR (captura el fallo)
+            // Retorna ERROR
             return redirect()->route('catalogos.ods.index')
                 ->with('error', 'No se pudo guardar el ODS. Detalles: ' . $e->getMessage());
         }
@@ -77,8 +106,6 @@ class OdsController extends Controller
 
     public function update(Request $request, $id)
     {
-        //dd($request->all());
-
         $request->validate([
             'codigo'        => 'string',
             'nombre'        => 'string|max:255',

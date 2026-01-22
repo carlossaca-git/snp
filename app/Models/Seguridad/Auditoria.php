@@ -2,24 +2,28 @@
 
 namespace App\Models\Seguridad;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Auditoria extends Model
 {
+    use Auditable;
     use HasFactory;
+    // SoftDeletes;
 
-    // 1. Nombre de la tabla según tu migración
+    //  Nombre de la tabla según tu migración
     protected $table = 'seg_auditoria';
 
-    // 2. Llave primaria personalizada
+    //  Llave primaria personalizada
     protected $primaryKey = 'id_auditoria';
 
-    // 3. Desactivamos timestamps estándar de Laravel (created_at/updated_at)
+    // Desactivamos timestamps estándar de Laravel
     // porque usamos 'fecha_hora' de forma personalizada
     public $timestamps = false;
 
-    // 4. Campos que se pueden llenar masivamente
+    // Campos que se pueden llenar masivamente
     protected $fillable = [
         'id_usuario',
         'ip_address',

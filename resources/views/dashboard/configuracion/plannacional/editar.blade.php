@@ -1,6 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
+<x-layouts.header_content titulo="Registro Plan Nacional" subtitulo="Registre un nuevo plan nacional de desarrollo">
+        @if (Auth::user()->tienePermiso('pnd.gestionar'))
+            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        @endif
+    </x-layouts.header_content>
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-8">

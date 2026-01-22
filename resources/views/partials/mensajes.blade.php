@@ -1,6 +1,5 @@
-{{-- resources/views/layouts/mensajes.blade.php --}}
 
-{{-- 1. MENSAJE DE ÉXITO --}}
+{{-- MENSAJE DE ÉXITO --}}
 @if (session('success'))
     <div class="alert alert-success alert-dismissible fade show shadow-sm border-left-success" role="alert">
         <i class="fas fa-check-circle me-2"></i>
@@ -9,9 +8,8 @@
     </div>
 @endif
 
-{{-- 2. MENSAJE DE ERROR (Manual del Controlador) --}}
+{{--  MENSAJE DE ERROR (Manual del Controlador) --}}
 @if (session('error'))
-    {{-- Agregué la clase 'alerta-manual-error' para identificarla en JS si quieres --}}
     <div class="alert alert-danger alert-dismissible fade show shadow-sm border-left-danger alerta-manual-error" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
         <strong>Error:</strong> {{ session('error') }}
@@ -19,7 +17,7 @@
     </div>
 @endif
 
-{{-- 3. ERRORES DE VALIDACIÓN (Laravel automático) --}}
+{{--ERRORES DE VALIDACIÓN (Laravel automático) --}}
 @if ($errors->any())
     <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
         <div class="d-flex align-items-center mb-1">
@@ -35,17 +33,12 @@
     </div>
 @endif
 
-{{-- SCRIPT CORREGIDO: Fuera de los IFs --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Configuración de tiempo (4 segundos)
+
         const tiempoEspera = 4000;
 
         setTimeout(function() {
-            // Seleccionamos la alerta de ÉXITO y la de ERROR MANUAL.
-            // Excluimos la de validación ($errors) para que el usuario pueda leerla con calma.
-
-            // Buscamos clases específicas
             const alertas = document.querySelectorAll('.alert-success, .alerta-manual-error');
 
             alertas.forEach(function(alerta) {

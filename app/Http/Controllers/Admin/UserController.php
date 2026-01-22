@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use Exception;
 use App\Http\Controllers\Controller;
 use App\Models\Institucional\OrganizacionEstatal;
+use App\Models\Inversion\ProyectoInversion;
 use App\Models\Seguridad\User;
 use App\Models\Seguridad\Rol;
 use Illuminate\Http\Request;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
-use App\Notifications\NuevoUsuarioCreado;
+
 use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
@@ -19,9 +21,31 @@ class UserController extends Controller
     /**
      * Listado de Usuarios
      */
-    public function index()
+    public function index(Request $request)
     {
-        $usuarios = User::with(['roles','organizacion'])->orderBy('id_usuario', 'desc')->paginate(10);
+        //  Capturamos el texto del buscador
+        $busqueda = $request->input('busqueda');
+
+        //  Iniciamos la consulta con relaciones
+        $query = User::with(['roles', 'organizacion']);
+
+        //  Aplicamos el filtro si existe búsqueda
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('nombres', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('apellidos', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('usuario', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('identificacion', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('correo_electronico', 'LIKE', "%{$busqueda}%")
+                    // Búsqueda avanzada: Buscar también por nombre de la Organización
+                    ->orWhereHas('organizacion', function ($subQ) use ($busqueda) {
+                        $subQ->where('nom_organizacion', 'LIKE', "%{$busqueda}%");
+                    });
+            });
+        }
+        $usuarios = $query->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends(['busqueda' => $busqueda]);
 
         return view('dashboard.admin.usuarios.index', compact('usuarios'));
     }
@@ -35,16 +59,34 @@ class UserController extends Controller
         $organizaciones = OrganizacionEstatal::all();
         return view('dashboard.admin.usuarios.crear', compact('roles', 'organizaciones'));
     }
+    /**
+     * Perfil de usuario
+     */
+    public function show()
+    {
+        // Obtenemos al usuario logueado
+        /** @var \App\Models\Seguridad\User $user */
+        $user = Auth::user();
+        $user->load('organizacion');
+        $proyectos = ProyectoInversion::where('id_usuario_creacion', $user->id)
+            ->with('objetivo')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
+        return view('dashboard.admin.usuarios.show', compact('user', 'proyectos'));
+        //return view('dashboard.admin.usuarios.show', compact('user'));
+    }
     /**
      * Guardar Usuario
      */
     public function store(Request $request)
     {
-        // dd($request->all());
+    //  obtenemos el usuario actual
+        /** @var \App\Models\Seguridad\User $currentUser */
+        $currentUser = Auth::user();
 
-        // 1. VALIDACIÓN ROBUSTA
-        $request->validate([
+        // Definimos reglas base
+        $rules = [
             'identificacion'     => 'required|digits:10|unique:seg_usuario,identificacion',
             'nombres'            => 'required|string|max:100',
             'apellidos'          => 'required|string|max:100',
@@ -53,48 +95,68 @@ class UserController extends Controller
             'password'           => 'required|confirmed|min:8',
             'roles'              => 'required|array',
             'roles.*'            => 'exists:seg_rol,id_rol',
-            'id_organizacion'    => 'required|exists:cat_organizacion_estatal,id_organizacion',
-        ]);
+        ];
+        // Si es Super Admin, exigimos que envíe una org válida.
+        // Si es local, no lo validamos aquí porque lo vamos a forzar después (o validamos que coincida).
+        if ($currentUser->tieneRol('SUPER_ADMIN')) {
+            $rules['id_organizacion'] = 'required|exists:cat_organizacion_estatal,id_organizacion';
+        }
+
+        $validatedData = $request->validate($rules);
 
         try {
             DB::beginTransaction();
 
-            // 2. CREAR EL USUARIO
-            $user = User::create([
-                'identificacion'     => $request->identificacion,
-                'nombres'            => $request->nombres,
-                'apellidos'          => $request->apellidos,
-                'usuario'            => $request->usuario,
-                'correo_electronico' => $request->correo_electronico,
-                'password'           => Hash::make($request->password),
-                'id_organizacion'    => $request->id_organizacion,
 
-                // LÓGICA DE VERIFICACIÓN MANUAL
-                // se guarda la fecha actual. Si no, queda NULL.
+            // Determinamos el ID de Organización final
+            if ($currentUser->tieneRol('SUPER_ADMIN') || $currentUser->tieneRol('ADMIN_TI')) {
+                // Si es Super Admin, confiamos en lo que eligió en el select
+                $finalOrgId = $request->id_organizacion;
+            } else {
+                // Si es un Admin Local, IGNORAMOS lo que venga en el request
+                // y forzamos su propio ID. Esto evita ataques de inyección de ID.
+                $finalOrgId = $currentUser->id_organizacion;
+            }
+
+
+            // Evitar que un usuario local cree un "Super Admin"
+            $rolesAAsignar = $request->roles;
+            if (!$currentUser->tieneRol('SUPER_ADMIN')) {
+                if (in_array(1, $rolesAAsignar)) {
+                    // Opción A: Lanzar error y detener todo
+                    throw new Exception('No tienes permiso para crear Super Administradores.');
+                }
+            }
+
+            // CREAR EL USUARIO
+            $user = User::create([
+                'identificacion'     => $validatedData['identificacion'],
+                'nombres'            => $validatedData['nombres'],
+                'apellidos'          => $validatedData['apellidos'],
+                'usuario'            => $validatedData['usuario'],
+                'correo_electronico' => $validatedData['correo_electronico'],
+                'password'           => Hash::make($validatedData['password']),
+                'id_organizacion'    => $finalOrgId,
                 'email_verified_at'  => $request->has('verificado') ? now() : null,
                 'estado'             => 1,
             ]);
 
-            // 3. ASIGNAR ROLES
-            // Usamos $request->roles porque así se llama en la validación y en el formulario HTML
-            $user->roles()->attach($request->roles);
+            // ASIGNAR ROLES
+            $user->roles()->attach($rolesAAsignar);
 
             DB::commit();
 
-            // 4. NOTIFICACIÓN (Opcional)
+            // NOTIFICACIÓN
             try {
-                //  importar la clase: use App\Notifications\NuevoUsuarioCreado;
                 $user->notify(new \App\Notifications\NuevoUsuarioCreado($request->password, $user));
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::error('Error enviando correo de bienvenida: ' . $e->getMessage());
-                // No hacemos rollback porque el usuario SÍ se creó correctamente
             }
 
             return redirect()->route('administracion.usuarios.index')
                 ->with('success', 'Usuario creado correctamente.');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
-            // Log para que tú veas el error real en storage/logs/laravel.log
             Log::error('Error creando usuario: ' . $e->getMessage());
 
             return back()
@@ -105,7 +167,7 @@ class UserController extends Controller
 
     /**
      * Formulario de Edición
-     * Nota: Usamos $usuario en lugar de $user porque en routes definimos parameters(['usuarios' => 'usuario'])
+     *
      */
     public function edit(User $usuario)
     {
@@ -128,18 +190,13 @@ class UserController extends Controller
             'nombres'            => 'required|string|max:100',
             'apellidos'          => 'required|string|max:100',
             'correo_electronico' => ['required', 'email', Rule::unique('seg_usuario')->ignore($usuario->id_usuario, 'id_usuario')],
-
-            // Campos de Negocio
             'id_rol'             => 'required|exists:seg_rol,id_rol',
             'id_organizacion'    => 'required|exists:cat_organizacion_estatal,id_organizacion',
             'estado'             => 'required|in:1,0',
-
-            // Password opcional
             'password'           => 'nullable|confirmed|min:8',
         ]);
-
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
 
             $fechaVerificacion = $request->has('verificado')
                 ? ($usuario->email_verified_at ?? now())
@@ -151,9 +208,9 @@ class UserController extends Controller
                 'nombres'            => $request->nombres,
                 'apellidos'          => $request->apellidos,
                 'correo_electronico' => $request->correo_electronico,
-                'id_organizacion'    => $request->id_organizacion, // Actualizar entidad
-                'estado'             => $request->estado,          // Actualizar estado
-                'email_verified_at'  => $fechaVerificacion,        // Actualizar verificación
+                'id_organizacion'    => $request->id_organizacion,
+                'estado'             => $request->estado,
+                'email_verified_at'  => $fechaVerificacion,
             ]);
 
             //  ACTUALIZAR CONTRASEÑA (SOLO SI SE ESCRIBIÓ)
@@ -169,7 +226,7 @@ class UserController extends Controller
             return redirect()->route('administracion.usuarios.index')
                 ->with('success', 'Usuario actualizado correctamente.'); // Usa 'success' si tu layout usa esa variable
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Fallo al actualizar: ' . $e->getMessage()])->withInput();
         }

@@ -1,37 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-    <script src="https://unpkg.com/feather-icons"></script>
-    <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 mb-0 text-dark fw-bold">Editar Inversión: Formulación de Proyecto</h1>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="#">Gestión</a></li>
-                        <li class="breadcrumb-item"><a href="{{ route('inversion.proyectos.index') }}">Proyectos</a></li>
-                        <li class="breadcrumb-item active">Editar Proyecto</li>
-                    </ol>
-                </nav>
-            </div>
-            <a href="{{ route('inversion.proyectos.index') }}" class="btn btn-outline-secondary border-2 fw-bold">
-                <span data-feather="arrow-left"></span> Volver al Banco
+    <x-layouts.header_content titulo="Modificacion de Proyecto"
+        subtitulo="{{ Auth::user()->organizacion->nom_organizacion }}">
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ route('inversion.proyectos.index') }}"
+                class="btn btn-outline-secondary border-2 fw-bold d-inline-flex align-items-center">
+                <i class="fas fa-arrow-left me-2"></i> Volver al Banco
             </a>
         </div>
-
-        @if ($errors->any())
-            <div class="alert alert-danger shadow-sm border-2">
-                <strong><i class="fas fa-exclamation-circle"></i> Error de Validación:</strong>
-                <ul class="mt-2 mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        <form action="{{ route('inversion.proyectos.update', $proyecto->id) }}" method="POST"
-            enctype="multipart/form-data">
+    </x-layouts.header_content>
+    <div class="container-fluid py-4">
+        @include('partials.mensajes')
+        <form action="{{ route('inversion.proyectos.update', $proyecto->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -59,7 +40,7 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link text-secondary fw-bold px-4 py-3" id="docs-tab" data-bs-toggle="tab"
                                 data-bs-target="#docs" type="button" role="tab">
-                                <span data-feather="folder" class="me-1"></span> 4. Documentación
+                                <span class="me-1"></span> 4. Documentación
                             </button>
                         </li>
                     </ul>
@@ -99,19 +80,6 @@
                                         class="form-control form-control-lg border-2" required
                                         value="{{ old('nombre_proyecto', $proyecto->nombre_proyecto) }}">
                                 </div>
-
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Entidad Responsable</label>
-                                    <select name="id_organizacion" class="form-select border-2" required>
-                                        <option value="" disabled selected>-- Seleccione Ministerio/GAD --</option>
-                                        @foreach ($organizaciones as $entidad)
-                                            <option value="{{ $entidad->id_organizacion }}"
-                                                {{ $proyecto->id_organizacion == $entidad->id_organizacion ? 'selected' : '' }}>
-                                                {{ $entidad->nom_organizacion }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-bold">Programa Presupuestario</label>
                                     <select name="id_programa" class="form-select border-2" required>
@@ -124,8 +92,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label fw-bold">Tipo de Inversión</label>
                                     <select name="tipo_inversion" class="form-select border-2" required>
                                         <option value="OBRA PUBLICA"
@@ -264,34 +231,43 @@
                         </div>
 
                         <div class="tab-pane fade" id="alineacion" role="tabpanel">
-                            <div class="alert alert-secondary d-flex align-items-center mb-4 border-0">
-                                <span data-feather="info" class="me-2"></span>
-                                <div>Todo proyecto debe responder a un objetivo del Plan Nacional de Desarrollo (PND).</div>
-                            </div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Eje Estratégico</label>
-                                    <select name="id_eje" id="select_eje" class="form-select border-2" required>
-                                        <option value="" selected disabled>-- Seleccione un Eje --</option>
-                                        @foreach ($ejes as $eje)
-                                            <option value="{{ $eje->id_eje }}"
-                                                {{ $proyecto->objetivo?->id_eje == $eje->id_eje ? 'selected' : '' }}>
-                                                {{ $eje->nombre_eje }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Objetivo Nacional (PND)</label>
-                                    <select name="id_objetivo_nacional" id="select_objetivo" class="form-select border-2"
-                                        required>
-                                        @foreach ($objetivos as $obj)
-                                            <option value="{{ $obj->id_objetivo_nacional }}"
-                                                {{ $proyecto->objetivo_nacional == $obj->id_objetivo_nacional ? 'selected' : '' }}>
-                                                {{ $obj->descripcion_objetivo }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                            <div class="row justify-content-center">
+                                <div class="col-md-10">
+                                    <div class="alert alert-info border-0 shadow-sm mb-4">
+                                        <div class="d-flex">
+                                            <i class="fas fa-sitemap fa-2x me-3 opacity-50"></i>
+                                            <div>
+                                                <p class="mb-0 small">Al seleccionar su <strong>Objetivo Estratégico
+                                                        Institucional</strong>, el sistema vinculará automáticamente este
+                                                    proyecto a la Meta Nacional del PND correspondiente.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-bold">Objetivo Estratégico (PEI)</label>
+
+                                        <select name="id_objetivo_estrategico" id="select_objetivo"
+                                            class="form-select form-select-lg shadow-sm" required>
+                                            <option value="">-- Seleccione Objetivo --</option>
+
+                                            @foreach ($objetivos as $obj)
+                                                <option value="{{ $obj->id_objetivo_estrategico }}"
+                                                    data-metas='@json($obj->info_alineacion)'
+                                                    {{ $proyecto->id_objetivo_estrategico == $obj->id_objetivo_estrategico ? 'selected' : '' }}>
+                                                    {{ $obj->codigo }} - {{ Str::limit($obj->nombre, 100) }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    {{-- Tarjeta de Feedback Automático --}}
+                                    <div id="info_alineacion" class="card bg-light border-0 shadow-sm d-none">
+                                        <div class="card-body">
+                                            <h6 class="text-secondary fw-bold text-uppercase small mb-3">
+                                                <i class="fas fa-network-wired me-1"></i> Impacto Nacional Identificado
+                                            </h6>
+                                            <div id="lista_metas_container"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -376,7 +352,8 @@
 
                 <div class="card-footer bg-light p-3 d-flex justify-content-end">
                     <button type="reset" class="btn btn-link text-muted me-3">Restaurar Valores</button>
-                    <button type="submit" id="btnGuardarProyecto" class="btn btn-dark px-5 py-2 fw-bold">
+                    <button type="submit" id="btnGuardarProyecto"
+                        class="btn btn-secondary fw-bold px-4 shadow-sm btn-sm">
                         <span data-feather="save" class="me-1"></span> Guardar Cambios
                     </button>
                 </div>
@@ -395,26 +372,26 @@
             color: #0d2a44;
         }
 
-        /* 1. Para los documentos que ya vienen de la BD */
+
         #lista-documentos-cuerpo tr:hover {
             background-color: #f1f4f9 !important;
-            /* Gris azulado suave */
+
             cursor: pointer;
         }
 
-        /* 2. Para los documentos TEMPORALES (los amarillos) */
+
         #lista-documentos-cuerpo tr.table-warning:hover {
             background-color: #ffeeba !important;
-            /* Un amarillo más fuerte para que se note el hover */
+
             cursor: pointer;
         }
 
-        /* 3. Animación suave para todas las filas */
+
         #lista-documentos-cuerpo tr {
             transition: all 0.2s ease-in-out;
         }
 
-        /* 4. Opcional: Que el texto se ponga azul al pasar el mouse */
+
         #lista-documentos-cuerpo tr:hover td a {
             color: #1a4a72 !important;
             font-weight: bold;
@@ -423,7 +400,6 @@
         /* Definimos un ancho máximo para la columna del nombre */
         .col-nombre-archivo {
             max-width: 250px;
-            /* Puedes ajustar este valor según tu pantalla */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -431,7 +407,7 @@
             vertical-align: middle;
         }
 
-        /* Opcional: Que al pasar el mouse se vea el nombre completo en un tooltip */
+        /*  Que al pasar el mouse se vea el nombre completo en un tooltip */
         .col-nombre-archivo:hover {
             overflow: visible;
             white-space: normal;
@@ -444,434 +420,382 @@
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
     </style>
+@endsection
+@push('scripts')
+    <script>
+        /**
+         * ==========================================
+         *  GESTIÓN FINANCIERA (TABLA DINÁMICA)
+         * ==========================================
+         */
+        function agregarFila() {
+            const tbody = document.getElementById('cuerpoFinanciamiento');
+            const index = Date.now();
+            const fila = `
+            <tr>
+                <td>
+                    <input type="number" name="financiamientos[new_${index}][anio]" class="form-control form-control-sm" required placeholder="202X">
+                </td>
+                <td>
+                    <select name="financiamientos[new_${index}][id_fuente]" class="form-select form-select-sm">
+                        @foreach ($fuentes as $fuente)
+                            <option value="{{ $fuente->id_fuente }}">{{ $fuente->nombre_fuente }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td>
+                    <input type="number" step="0.01" name="financiamientos[new_${index}][monto]" class="form-control form-control-sm monto-input" required placeholder="0.00">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm p-0 d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;" onclick="borrarFilaInteligente(this)">
+                        <span style="font-size: 1.5rem; line-height: 1; margin-top: -2px;">&times;</span>
+                    </button>
+                </td>
+            </tr>`;
+            tbody.insertAdjacentHTML('beforeend', fila);
+        }
 
-    @push('scripts')
-        <script>
-            // FUNCIÓN AGREGAR FILA (JS)
-            function agregarFila() {
-                const tbody = document.getElementById('cuerpoFinanciamiento');
-                const index = Date.now();
-                const fila = `
-                    <tr>
-                        <td>
-                            <input type="number" name="financiamientos[new_${index}][anio]" class="form-control form-control-sm" required placeholder="202X">
-                        </td>
-                        <td>
-                            <select name="financiamientos[new_${index}][id_fuente]" class="form-select form-select-sm">
-                                @foreach ($fuentes as $fuente)
-                                    <option value="{{ $fuente->id_fuente }}">{{ $fuente->nombre_fuente }}</option>
-                                @endforeach
-                            </select>
-                        </td>
-                        <td>
-                            <input type="number" step="0.01" name="financiamientos[new_${index}][monto]" class="form-control form-control-sm monto-input" required placeholder="0.00">
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-danger btn-sm p-0 d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;" onclick="borrarFilaInteligente(this)">
-                                <span style="font-size: 1.5rem; line-height: 1; margin-top: -2px;">&times;</span>
-                            </button>
-                        </td>
-                    </tr>`;
-                tbody.insertAdjacentHTML('beforeend', fila);
+        function borrarFilaInteligente(boton) {
+            const fila = boton.closest('tr');
+            const checkbox = fila.querySelector('.delete-chk');
+
+            if (checkbox) {
+                checkbox.checked = true;
+                fila.style.display = 'none';
+                const inputMonto = fila.querySelector('.monto-input');
+                if (inputMonto) inputMonto.value = 0;
+            } else {
+                fila.remove();
             }
+            calcularTotal();
+        }
 
-            function borrarFilaInteligente(boton) {
-                const fila = boton.closest('tr');
-                const checkbox = fila.querySelector('.delete-chk');
-                if (checkbox) {
-                    checkbox.checked = true;
-                    fila.style.display = 'none';
-                    // Al ocultar una fila, su monto ya no debe sumar.
-                    // Lo ponemos en 0 visualmente o quitamos la clase,
+        function calcularTotal() {
+            let suma = 0;
+            const inputs = document.querySelectorAll('.monto-input');
 
-                    const inputMonto = fila.querySelector('.monto-input');
-                    if (inputMonto) {
-                        inputMonto.value = 0;
-                    }
-                    calcularTotal(); // Recalcular al borrar
-                } else {
-                    fila.remove();
-                    calcularTotal(); // Recalcular al borrar
+            inputs.forEach(input => {
+                const fila = input.closest('tr');
+                // Solo sumar si la fila es visible
+                if (fila && fila.style.display !== 'none') {
+                    suma += parseFloat(input.value) || 0;
                 }
-            }
+            });
 
-            // 2. CÁLCULOS
-            function calcularTotal() {
-                let suma = 0;
-                // Ahora sí encontrará los inputs porque les pusimos la clase 'monto-input'
-                // sumamos las filas visibles (style.display != none)
-                const inputs = document.querySelectorAll('.monto-input');
+            const display = document.getElementById('suma_total_format');
+            const inputGlobal = document.getElementById('monto_total_inversion');
+            const global = parseFloat(inputGlobal ? inputGlobal.value : 0) || 0;
+            const diff = Math.abs(suma - global);
+            const cuadra = (global > 0 && diff <= 0.01);
+            const alerta = document.getElementById('alerta_monto');
 
-                inputs.forEach(input => {
-                    const fila = input.closest('tr');
-                    if (fila.style.display !== 'none') {
-                        suma += parseFloat(input.value) || 0;
-                    }
-                });
-
-                const display = document.getElementById('suma_total_format');
+            if (display) {
                 display.innerText = '$ ' + suma.toLocaleString('en-US', {
                     minimumFractionDigits: 2
                 });
 
-                const global = parseFloat(document.getElementById('monto_total_inversion').value) || 0;
-                const diff = Math.abs(suma - global);
-                const cuadra = (global > 0 && diff <= 0.01);
-
-                const alerta = document.getElementById('alerta_monto');
-
                 if (suma > 0 || global > 0) {
-                    if (cuadra) {
-                        display.style.setProperty('color', '#198754', 'important'); // Verde
-                        alerta.classList.add('d-none');
-                    } else {
-                        display.style.setProperty('color', '#dc3545', 'important'); // Rojo
-                        alerta.classList.remove('d-none');
-                    }
+                    display.style.setProperty('color', cuadra ? '#198754' : '#dc3545', 'important');
+                    if (alerta) cuadra ? alerta.classList.add('d-none') : alerta.classList.remove('d-none');
                 }
-
-                validarBotonGuardar(cuadra);
             }
+            validarBotonGuardar(cuadra);
+        }
 
-            function validarBotonGuardar(presupuestoCuadra) {
-                const btn = document.getElementById('btnGuardarProyecto');
+        function validarBotonGuardar(presupuestoCuadra) {
+            const btn = document.getElementById('btnGuardarProyecto');
+            if (!btn) return;
 
-                // Solo cambiamos el color visualmente, PERO YA NO LO BLOQUEAMOS
-                if (presupuestoCuadra) {
-                    btn.classList.remove('btn-secondary');
-                    btn.classList.add('btn-dark');
-                    btn.style.opacity = "1";
+            if (presupuestoCuadra) {
+                btn.classList.replace('btn-secondary', 'btn-dark');
+                btn.style.opacity = "1";
+            } else {
+                btn.classList.replace('btn-dark', 'btn-secondary');
+                btn.style.opacity = "0.9";
+            }
+        }
+
+        /**
+         *
+         *  GESTIÓN DE ARCHIVOS (PREVISUALIZACIÓN Y BORRADO)
+         *
+         */
+        let listaArchivosACargar = new DataTransfer();
+
+        //  Visualizar archivos seleccionados antes de subir
+        const inputDocs = document.getElementById('input-nuevos-docs');
+        if (inputDocs) {
+            inputDocs.addEventListener('change', function(e) {
+                const cuerpoTabla = document.getElementById('lista-documentos-cuerpo');
+                const nuevosArchivos = Array.from(e.target.files);
+
+                nuevosArchivos.forEach((archivo) => {
+                    listaArchivosACargar.items.add(archivo); // Añadir al global
+
+                    const tempId = 'file-' + Math.random().toString(36).substr(2, 9);
+                    const urlTemporal = URL.createObjectURL(archivo);
+
+                    // Renderizar fila temporal
+                    const filaHTML = `
+                    <tr id="${tempId}" class="table-warning">
+                        <td>
+                            <a href="${urlTemporal}" target="_blank" class="text-decoration-none text-dark" title="${archivo.name}">
+                                <i class="fas fa-file-upload text-primary me-2"></i>
+                                <strong>${archivo.name}</strong> <small class="text-muted">(${(archivo.size / 1024).toFixed(1)} KB)</small>
+                            </a>
+                        </td>
+                        <td><span class="badge bg-primary">Por subir</span></td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removerArchivoSeleccionado('${tempId}', '${archivo.name}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                    cuerpoTabla.insertAdjacentHTML('beforeend', filaHTML);
+                });
+                // Sincronizar input real
+                inputDocs.files = listaArchivosACargar.files;
+            });
+        }
+
+        // Remover archivo de la lista de subida
+        function removerArchivoSeleccionado(filaId, nombreArchivo) {
+            const contenedorNuevo = new DataTransfer();
+            let borrado = false;
+
+            Array.from(listaArchivosACargar.files).forEach((file) => {
+                if (file.name === nombreArchivo && !borrado) {
+                    borrado = true;
                 } else {
-                    // Lo dejamos gris para avisar, pero habilitado para que puedas hacer clic
-                    btn.classList.remove('btn-dark');
-                    btn.classList.add('btn-secondary');
-                    // btn.disabled = true;  <-- ESTA LÍNEA LA BORRAMOS O COMENTAMOS
-                    btn.style.opacity = "0.9";
-                }
-            }
-
-            // EVENTOS
-            document.addEventListener('DOMContentLoaded', function() {
-                // Eventos de cálculo financiero
-                const tabla = document.getElementById('tablaFinanciamiento');
-                const inputGlobal = document.getElementById('monto_total_inversion');
-                const form = document.querySelector('form');
-
-                if (tabla) {
-                    tabla.addEventListener('input', function(e) {
-                        if (e.target.classList.contains('monto-input')) calcularTotal();
-                    });
-                }
-                if (inputGlobal) {
-                    inputGlobal.addEventListener('input', calcularTotal);
-                }
-                if (form) {
-                    form.addEventListener('input', function() {
-                        calcularTotal();
-                    }); // Revalidar todo al escribir
-                }
-
-                // Eventos de Fechas
-                const fInicio = document.getElementById('fecha_inicio');
-                const fFin = document.getElementById('fecha_fin');
-                const duracion = document.getElementById('duracion');
-
-                function calcFechas() {
-                    if (fInicio.value && fFin.value) {
-                        const d1 = new Date(fInicio.value);
-                        const d2 = new Date(fFin.value);
-                        let m = (d2.getFullYear() - d1.getFullYear()) * 12;
-                        m -= d1.getMonth();
-                        m += d2.getMonth();
-                        duracion.value = m <= 0 ? 0 : m;
-                    }
-                }
-                if (fInicio) fInicio.addEventListener('change', calcFechas);
-                if (fFin) fFin.addEventListener('change', calcFechas);
-
-                //  CALCULAR AL INICIO                //
-                calcularTotal();
-
-                ///////////////////////////////
-                ////Carga de objetivos frente a ejes
-                // E. LÓGICA DE OBJETIVOS (AJAX)
-                const selectEje = document.getElementById('select_eje');
-                if (selectEje) {
-                    selectEje.addEventListener('change', function() {
-                        const ejeId = this.value;
-                        const target = document.getElementById('select_objetivo');
-                        if (!ejeId) return;
-
-                        target.innerHTML = '<option>Cargando...</option>';
-                        let url = "{{ route('inversion.proyectos.getObjetivos', ['ejeId' => 'TEMP']) }}"
-                            .replace('TEMP', ejeId);
-
-                        fetch(url)
-                            .then(r => r.json())
-                            .then(data => {
-                                target.innerHTML = '<option value="">-- Seleccione --</option>';
-                                data.forEach(d => target.add(new Option(d.descripcion_objetivo, d
-                                    .id_objetivo_nacional)));
-                            })
-                            .catch(e => target.innerHTML = '<option>Error</option>');
-                    });
+                    contenedorNuevo.items.add(file);
                 }
             });
 
+            listaArchivosACargar = contenedorNuevo;
+            if (inputDocs) inputDocs.files = listaArchivosACargar.files;
 
-            /////////////////////////////////////////////////////
-            //Lectura archivos JSON de las provincias del ecuador
+            const fila = document.getElementById(filaId);
+            if (fila) fila.remove();
+        }
 
-            document.addEventListener('DOMContentLoaded', function() {
+        //  Borrar archivo guardado
+        function confirmarEliminacion(id) {
+            if (!confirm('¿Estás seguro de que deseas eliminar este documento permanentemente?')) return;
 
-                const selProvincia = document.getElementById('select_provincia');
-                const selCanton = document.getElementById('select_canton');
-                const selParroquia = document.getElementById('select_parroquia');
-                let datosEcuador = {};
+            let url = "{{ route('inversion.proyectos.documentos.destroy', ':id') }}".replace(':id', id);
 
-                function limpiar(str) {
-                    return str ? str.toString().trim().toUpperCase() : "";
+            fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(res => res.ok ? res.json() : Promise.reject(res))
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`fila-doc-${id}`).remove();
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error al eliminar el documento.');
+                });
+        }
+        //EVENTOS GLOBALES
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // --- EVENTOS FINANCIEROS ---
+            const tablaFin = document.getElementById('tablaFinanciamiento');
+            const inputGlobal = document.getElementById('monto_total_inversion');
+            const form = document.querySelector('form');
+
+            if (tablaFin) tablaFin.addEventListener('input', e => {
+                if (e.target.classList.contains('monto-input')) calcularTotal();
+            });
+            if (inputGlobal) inputGlobal.addEventListener('input', calcularTotal);
+            if (form) form.addEventListener('input', calcularTotal);
+
+            // Ejecutar cálculo inicial
+            calcularTotal();
+
+            // --- CÁLCULO DE FECHAS ---
+            const fInicio = document.getElementById('fecha_inicio');
+            const fFin = document.getElementById('fecha_fin');
+            const duracion = document.getElementById('duracion');
+
+            function calcFechas() {
+                if (fInicio && fFin && fInicio.value && fFin.value) {
+                    const d1 = new Date(fInicio.value);
+                    const d2 = new Date(fFin.value);
+                    let m = (d2.getFullYear() - d1.getFullYear()) * 12;
+                    m -= d1.getMonth();
+                    m += d2.getMonth();
+                    if (duracion) duracion.value = m <= 0 ? 0 : m;
                 }
+            }
+            if (fInicio) fInicio.addEventListener('change', calcFechas);
+            if (fFin) fFin.addEventListener('change', calcFechas);
 
-                // 1. CARGAR JSON
+            // --- UBICACIÓN GEOGRÁFICA  ---
+            const selProvincia = document.getElementById('select_provincia');
+            const selCanton = document.getElementById('select_canton');
+            const selParroquia = document.getElementById('select_parroquia');
+            let datosEcuador = {};
+
+            if (selProvincia) {
                 fetch("{{ asset('json/ecuador.json') }}")
                     .then(r => r.json())
                     .then(data => {
                         datosEcuador = data;
-                        console.log("✅ JSON cargado.");
                         cargarProvincias();
                     })
-                    .catch(e => console.error("❌ Error:", e));
+                    .catch(e => console.error("Error JSON:", e));
 
-                // 2. CARGAR PROVINCIAS
+                // Funciones auxiliares de ubicación
+                const limpiar = str => str ? str.toString().trim().toUpperCase() : "";
+
                 function cargarProvincias() {
                     selProvincia.innerHTML = '<option value="">-- Seleccione --</option>';
-
                     const dbProv = selProvincia.getAttribute('data-old');
-                    console.log(`🔍 BD envía: "${dbProv}"`); // Veremos qué llega realmente
-
                     let idEncontrado = null;
 
                     for (let id in datosEcuador) {
-                        const info = datosEcuador[id];
+                        let nombre = datosEcuador[id].provincia || "ZONA NO DELIMITADA";
+                        let opt = new Option(nombre, nombre);
+                        opt.setAttribute('data-id', id);
 
-                        // --- CORRECCIÓN CRÍTICA PARA EL ID 90 ---
-                        // Si el nodo no tiene propiedad 'provincia', le ponemos un nombre genérico o lo saltamos
-                        let nombreProvincia = info.provincia;
-                        if (!nombreProvincia) {
-                            // Opción A: Saltarlo
-                            // continue;
-                            // Opción B: Bautizarlo (Mejor)
-                            nombreProvincia = "ZONA NO DELIMITADA";
-                        }
-                        // -----------------------------------------
-
-                        let opcion = new Option(nombreProvincia, nombreProvincia);
-                        opcion.setAttribute('data-id', id);
-
-                        // Comparar
-                        if (limpiar(nombreProvincia) === limpiar(dbProv)) {
-                            opcion.selected = true;
+                        if (limpiar(nombre) === limpiar(dbProv)) {
+                            opt.selected = true;
                             idEncontrado = id;
                         }
-
-                        selProvincia.add(opcion);
+                        selProvincia.add(opt);
                     }
-
                     if (idEncontrado) cargarCantones(idEncontrado);
                 }
 
-                // 3. CARGAR CANTONES
                 function cargarCantones(idProv) {
                     selCanton.innerHTML = '<option value="">-- Seleccione --</option>';
                     selParroquia.innerHTML = '<option value="">-- Seleccione Cantón --</option>';
 
-                    // Validación extra de seguridad
-                    if (!datosEcuador[idProv] || !datosEcuador[idProv].cantones) return;
-
+                    if (!datosEcuador[idProv]?.cantones) return;
                     selCanton.disabled = false;
-                    const cantonesObj = datosEcuador[idProv].cantones;
-                    const dbCanton = selCanton.getAttribute('data-old');
 
+                    const cantones = datosEcuador[idProv].cantones;
+                    const dbCanton = selCanton.getAttribute('data-old');
                     let idEncontrado = null;
 
-                    for (let id in cantonesObj) {
-                        const info = cantonesObj[id];
+                    for (let id in cantones) {
+                        let nombre = cantones[id].canton;
+                        if (!nombre) continue;
+                        let opt = new Option(nombre, nombre);
+                        opt.setAttribute('data-id', id);
 
-                        // Validación por si algún cantón viene roto
-                        if (!info || !info.canton) continue;
-
-                        let opcion = new Option(info.canton, info.canton);
-                        opcion.setAttribute('data-id', id);
-
-                        if (limpiar(info.canton) === limpiar(dbCanton)) {
-                            opcion.selected = true;
+                        if (limpiar(nombre) === limpiar(dbCanton)) {
+                            opt.selected = true;
                             idEncontrado = id;
                         }
-
-                        selCanton.add(opcion);
+                        selCanton.add(opt);
                     }
-
                     if (idEncontrado) cargarParroquias(idProv, idEncontrado);
                 }
 
-                // 4. CARGAR PARROQUIAS
                 function cargarParroquias(idProv, idCant) {
                     selParroquia.innerHTML = '<option value="">-- Seleccione --</option>';
-
-                    if (!datosEcuador[idProv].cantones[idCant] || !datosEcuador[idProv].cantones[idCant].parroquias)
-                        return;
+                    const parroquias = datosEcuador[idProv]?.cantones[idCant]?.parroquias;
+                    if (!parroquias) return;
 
                     selParroquia.disabled = false;
-                    const parroquiasObj = datosEcuador[idProv].cantones[idCant].parroquias;
                     const dbParr = selParroquia.getAttribute('data-old');
 
-                    for (let id in parroquiasObj) {
-                        const nombre = parroquiasObj[id];
-                        let opcion = new Option(nombre, nombre);
-
-                        if (limpiar(nombre) === limpiar(dbParr)) {
-                            opcion.selected = true;
-                        }
-                        selParroquia.add(opcion);
+                    for (let id in parroquias) {
+                        let nombre = parroquias[id];
+                        let opt = new Option(nombre, nombre);
+                        if (limpiar(nombre) === limpiar(dbParr)) opt.selected = true;
+                        selParroquia.add(opt);
                     }
                 }
 
-                // Eventos
+                // Listeners de Ubicación
                 selProvincia.addEventListener('change', function() {
-                    const op = this.options[this.selectedIndex];
-                    const id = op.getAttribute('data-id');
+                    const id = this.options[this.selectedIndex].getAttribute('data-id');
                     selCanton.setAttribute('data-old', '');
                     cargarCantones(id);
                 });
 
                 selCanton.addEventListener('change', function() {
-                    const opP = selProvincia.options[selProvincia.selectedIndex];
-                    const idP = opP.getAttribute('data-id');
-                    const opC = this.options[this.selectedIndex];
-                    const idC = opC.getAttribute('data-id');
+                    const idP = selProvincia.options[selProvincia.selectedIndex].getAttribute('data-id');
+                    const idC = this.options[this.selectedIndex].getAttribute('data-id');
                     selParroquia.setAttribute('data-old', '');
                     cargarParroquias(idP, idC);
                 });
-            });
-            //////////////////////
-            //Eliminar documnetos
-            function confirmarEliminacion(id) {
-                if (confirm('¿Estás seguro de que deseas eliminar este documento?')) {
-
-
-                    let url = "{{ route('inversion.documentos.destroy', ':id') }}";
-                    url = url.replace(':id', id);
-
-                    fetch(url, {
-                            method: 'DELETE',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                                'Content-Type': 'application/json'
-                            }
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Ruta no encontrada o error de servidor');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data.success) {
-                                const fila = document.getElementById(`fila-doc-${id}`);
-                                fila.remove();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('Error: La ruta no pudo ser encontrada o el servidor no responde.');
-                        });
-                }
             }
-            /////////////////////////////////////////
-            //Vista previa de documento antes de subir
-            // 1. Iniciamos el contenedor virtual de archivos
-            let listaArchivosACargar = new DataTransfer();
+        });
+        // --- ALINEACIÓN OBJETIVOS - METAS ---
+        document.addEventListener('DOMContentLoaded', function() {
 
-            document.getElementById('input-nuevos-docs').addEventListener('change', function(e) {
-                const cuerpoTabla = document.getElementById('lista-documentos-cuerpo');
-                const input = e.target;
-                const nuevosArchivos = Array.from(input.files);
+            const selectObj = document.getElementById('select_objetivo');
+            const containerMeta = document.getElementById('info_alineacion');
+            const listaDivMeta = document.getElementById('lista_metas_container');
 
-                nuevosArchivos.forEach((archivo) => {
-                    // Añadimos el archivo al contenedor virtual
-                    listaArchivosACargar.items.add(archivo);
+            function mostrarAlineacion() {
+                listaDivMeta.innerHTML = '';
 
-                    // Creamos un ID único usando el tiempo para evitar duplicados
-                    const tempId = 'file-' + Math.random().toString(36).substr(2, 9);
-                    const urlTemporal = URL.createObjectURL(archivo);
-                    const iconoTrash = feather.icons['trash-2'].toSvg({
-                        class: 'text-red'
+                if (!selectObj.value) {
+                    containerMeta.classList.add('d-none');
+                    return;
+                }
+
+                const option = selectObj.options[selectObj.selectedIndex];
+                const rawData = option.getAttribute('data-metas');
+
+                if (!rawData) return;
+
+                const metas = JSON.parse(rawData);
+
+                if (metas.length > 0) {
+                    metas.forEach(meta => {
+
+                        // Construir Badges de ODS
+                        let htmlODS = '';
+                        if (meta.ods && meta.ods.length > 0) {
+                            htmlODS = '<div class="mt-2 d-flex flex-wrap gap-1">';
+
+                            meta.ods.forEach(ods => {
+                                const bg = ods.color || '#6c757d';
+
+                                htmlODS += `
+                                <span class="badge border border-white shadow-sm"
+                                      style="background-color: ${bg}; color: white;"
+                                      title="${ods.nombre}">
+                                    ODS ${ods.numero}
+                                </span>
+                            `;
+                            });
+                            htmlODS += '</div>';
+                        }
+
+                        // Construir HTML de la Meta
+                        const html = `
+                        <div class="border-bottom pb-2 mb-2">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+                                META ${meta.codigo}
+                            </span>
+                            <div class="small fw-bold mt-1 text-dark">${meta.nombre}</div>
+                            ${htmlODS}
+                        </div>`;
+
+                        listaDivMeta.insertAdjacentHTML('beforeend', html);
                     });
-                    const filaHTML = `
-            <tr id="${tempId}" class="table-warning">
-                <td>
-                    <a href="${urlTemporal}" target="_blank" class="text-decoration-none text-dark" title="${archivo.name}">
-                <i class="fas fa-file-upload text-primary me-2"></i>
-                <span class="col-nombre-archivo"><strong>${archivo.name}</strong></span>
-                <small class="text-muted ms-2">(${(archivo.size / 1024).toFixed(1)} KB)</small>
-                </a>
-                </td>
-                <td><span class="badge bg-primary">Por subir</span></td>
-                <td class="">
-                    <button type="button" class="btn btn-danger btn-sm"
-                            onclick="removerArchivoSeleccionado('${tempId}', '${archivo.name}')">
-                        <i class="fas fa-trash data-feather="trash-2">${iconoTrash}</i>
-                    </button>
-                </td>
-            </tr>`;
-
-                    cuerpoTabla.insertAdjacentHTML('beforeend', filaHTML);
-                    //feather.replace();
-                });
-
-                // 2. Sincronizamos el input real con nuestro contenedor virtual
-                input.files = listaArchivosACargar.files;
-
-            });
-
-            function removerArchivoSeleccionado(filaId, nombreArchivo) {
-                const input = document.getElementById('input-nuevos-docs');
-                const contenedorNuevo = new DataTransfer();
-                let encontrado = false;
-
-                // 3. Reconstruimos el contenedor excluyendo el archivo eliminado
-                Array.from(listaArchivosACargar.files).forEach((file) => {
-                    // Solo excluimos el primero que coincida con el nombre para evitar borrar duplicados de un solo golpe
-                    if (file.name === nombreArchivo && !encontrado) {
-                        encontrado = true; // Marcamos que ya lo quitamos
-                    } else {
-                        contenedorNuevo.items.add(file);
-                    }
-                });
-
-                // Actualizamos la referencia global y el input
-                listaArchivosACargar = contenedorNuevo;
-                input.files = listaArchivosACargar.files;
-
-                // Quitamos la fila de la vista con un pequeño efecto
-                const fila = document.getElementById(filaId);
-                if (fila) {
-                    fila.style.opacity = '0';
-                    setTimeout(() => fila.remove(), 200);
+                    containerMeta.classList.remove('d-none');
+                } else {
+                    listaDivMeta.innerHTML = '<span class="text-muted small">Sin alineación configurada</span>';
+                    containerMeta.classList.remove('d-none');
                 }
             }
 
-            function removerFilaTemporal(rowId) {
-                // Esto solo quita la fila de la vista.
-                // Nota: El archivo sigue en el input, si el usuario se equivocó
-                // lo ideal es que limpie el input y vuelva a seleccionar.
-                document.getElementById(rowId).remove();
-                alert(
-                    "Para cancelar la subida de este archivo específico, debe limpiar el selector de archivos o volver a seleccionar los correctos."
-                );
-            }
-        </script>
-    @endpush
-@endsection
+            selectObj.addEventListener('change', mostrarAlineacion);
+            mostrarAlineacion();
+        });
+    </script>
+@endpush

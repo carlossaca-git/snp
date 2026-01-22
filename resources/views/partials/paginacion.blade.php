@@ -2,7 +2,6 @@
     <nav>
         <ul class="pagination justify-content-end mb-0">
 
-            {{-- Botón Anterior --}}
             @if ($paginator->onFirstPage())
                 <li class="page-item disabled" aria-disabled="true" aria-label="@lang('pagination.previous')">
                     <span class="page-link border-0 bg-transparent text-muted" aria-hidden="true">

@@ -10,21 +10,21 @@ use App\Models\Inversion\ProyectoInversion;
 
 class UnidadEjecutora extends Model
 {
-    // 1. Nombre de la tabla en la Base de Datos
-    protected $table = 'cat_unidades_ejecutoras';
 
-    // 2. Campos que permitimos llenar (Mass Assignment)
+    protected $table = 'cat_unidades_ejecutoras';
+    protected $primaryKey = 'id';
+
+
     protected $fillable = [
-        'id_organizacion', // La llave foránea del "Papá"
+        'id_organizacion',
         'nombre_unidad',
         'codigo_interno',
         'activo'
     ];
 
-    // --- RELACIONES ---
 
     /**
-     * Relación HACIA ARRIBA (Padre)
+     *
      * Una Unidad Ejecutora PERTENECE A una Organización Estatal.
      */
     public function organizacion()
@@ -33,7 +33,7 @@ class UnidadEjecutora extends Model
     }
 
     /**
-     * Relación HACIA ABAJO (Hijos)
+     *
      * Una Unidad Ejecutora TIENE MUCHOS Proyectos de Inversión.
      */
     public function proyectos()

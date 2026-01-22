@@ -3,21 +3,21 @@
     <link rel="stylesheet" href="{{ asset('css/metas/metas-style.css') }}?v={{ time() }}">
 @endpush
 @section('content')
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">Metas Nacionales</h1>
-            <p class="text-muted small mb-0">Compromisos cuantificables vinculados a los Objetivos Nacionales</p>
+    <x-layouts.header_content titulo="Metas Nacionales"
+        subtitulo="Compromisos cuantificables vinculados a los Objetivos Nacionales">
+        <div class="btn-toolbar mb-2 mb-md-0">
+            @if (Auth::user()->tienePermiso('metas_pnd.gestionar'))
+                <button type="button" class="btn btn-secondary btn-sm d-inline-flex align-items-center" data-bs-toggle="modal"
+                    data-bs-target="#modalCrearMeta">
+                    <i class="fas fa-bullseye fa-sm text-white-50 me-1" data-feather="plus"></i> Nueva Meta
+                </button>
+            @endif
         </div>
-        <button type="button" class="btn btn-secondary btn-sm d-inline-flex align-items-center" data-bs-toggle="modal"
-            data-bs-target="#modalCrearMeta">
-            <i class="fas fa-bullseye fa-sm text-white-50 me-1" data-feather="plus"></i> Nueva Meta
-        </button>
 
-    </div>
+    </x-layouts.header_content>
+
     @include('partials.mensajes')
-
-    <div class="card shadow-sm border-0">
+    <div class="container">
         <div class="row mb-3 justify-content-end">
             {{-- BUSCADOR --}}
             <div class="col-md-4">
@@ -38,101 +38,72 @@
                             <i class="fas fa-times"></i>
                         </button>
                         {{-- Botón Buscar --}}
-                        <button class="btn btn-primary" type="submit">Buscar</button>
+                        <button class="btn btn-secondary" type="submit">Buscar</button>
                     </div>
                 </form>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="tablaMetas">
-                    <thead class="bg-light">
-                        <tr>
-                            <th class="px-4" style="width: 80px;">Código</th>
-                            <th style="width: 10%;">O. Nacional</th>
-                            <th style="width: 30">Definición de la Meta</th>
-                            <th class="text-center">Estado</th>
-                            <th>Progreso</th>
-                            <th class="text-center px-4">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($metas as $item)
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="tablaMetas">
+                        <thead class="bg-light">
                             <tr>
-                                <td class="px-4 fw-bold text-muted">{{ $item->codigo_meta ?? 'S/C' }}</td>
-                                <td>
-                                    <div class="small text-muted mb-1 text-uppercase fw-bold" style="font-size: 0.7rem;">
-                                        Objetivo Padre:</div>
-                                    <div class="fw-bold text-primary small">
-                                        {{ $item->objetivoNacional->codigo_objetivo ?? 'Sin Objetivo Asignado' }}</div>
-                                </td>
-                                <td>
-                                    <div class="text-dark small">{{ $item->nombre_meta }}</div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge rounded-pill {{ $item->estado == 1 ? 'bg-success' : 'bg-danger' }}">
-                                        {{ $item->estado == 1 ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {{-- CALCULOS PARA LAS BARRAS DE ESTADO DE AVANCE --}}
-                                    @php
-                                        // 1. Convertimos a números para operar
-                                        $lb = (float) $item->linea_base;
-                                        $mv = (float) $item->meta_valor;
-                                        $va = (float) ($item->valor_actual ?? $lb);
-
-                                        //  La meta es de REDUCCIÓN (Ej: Pobreza, Homicidios)
-                                        // Es reducción si el valor meta es menor que el inicial
-                                        $esReduccion = $mv < $lb;
-
-                                        if ($esReduccion) {
-                                            // Lógica de Reducción
-                                            if ($va >= $lb) {
-                                                $porcentaje = 0; // Si el valor subió, el progreso es cero
-                                            } elseif ($va <= $mv) {
-                                                $porcentaje = 100; // Si ya bajamos más de la meta, es 100%
-                                            } else {
-                                                // Calculo de cuanto hemos bajado hacia la meta
-                                                $totalAReducir = $lb - $mv;
-                                                $reducidoReal = $lb - $va;
-                                                $porcentaje = ($reducidoReal / $totalAReducir) * 100;
-                                            }
-                                        } else {
-                                            // Lógica de Incremento Ej: Empleo, Agua potable
-                                            if ($va <= $lb) {
-                                                $porcentaje = 0; // Si no ha subido nada, progreso cero
-                                            } elseif ($va >= $mv) {
-                                                $porcentaje = 100; // Si ya superamos la meta, es 100%
-                                            } else {
-                                                // Cálculo de cuánto hemos subido hacia la meta
-                                                $totalAIncrementar = $mv - $lb;
-                                                $incrementoReal = $va - $lb;
-                                                $porcentaje = ($incrementoReal / $totalAIncrementar) * 100;
-                                            }
-                                        }
-
-                                        // Colores del semáforo
-                                        $colorBarra = 'bg-danger';
-                                        if ($porcentaje >= 40) {
-                                            $colorBarra = 'bg-warning';
-                                        }
-                                        if ($porcentaje >= 80) {
-                                            $colorBarra = 'bg-success';
-                                        }
-                                    @endphp
-
-                                    {{-- La Barra Visual --}}
-                                    <div class="progress shadow-sm" style="height: 18px; border-radius: 10px;">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated {{ $colorBarra }}"
-                                            role="progressbar" style="width: {{ $porcentaje }}%;"
-                                            aria-valuenow="{{ $porcentaje }}" aria-valuemin="0" aria-valuemax="100">
-                                            {{ number_format($porcentaje, 0) }}%
+                                <th class="px-4" style="width: 80px;">Código</th>
+                                <th style="width: 10%;">O. Nacional</th>
+                                <th style="width: 30">Definición de la Meta</th>
+                                <th class="text-center">Estado</th>
+                                <th>Progreso</th>
+                                <th class="text-center px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($metas as $item)
+                                <tr>
+                                    <td class="px-4 fw-bold text-muted">{{ $item->codigo_meta ?? 'S/C' }}</td>
+                                    <td>
+                                        <div class="small text-muted mb-1 text-uppercase fw-bold"
+                                            style="font-size: 0.7rem;">
+                                            Objetivo Padre:</div>
+                                        <div class="fw-bold text-primary small">
+                                            {{ $item->objetivoNacional->codigo_objetivo ?? 'Sin Objetivo Asignado' }}</div>
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('catalogos.metas.show', $item) }}"
+                                            class="fw-bold text-decoration-none" title="Ver historial completo">
+                                            <div class="text-dark small">{{ $item->nombre_meta }}</div>
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span
+                                            class="badge rounded-pill {{ $item->estado == 1 ? 'bg-success' : 'bg-danger' }}">
+                                            {{ $item->estado == 1 ? 'Activo' : 'Inactivo' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="text-xs font-weight-bold text-muted">
+                                            {{ $item->proyectos_calculados->count() }} Proyectos
+                                        </span>
+                                        <span
+                                            class="small font-weight-bold {{ $item->avance_promedio < 50 ? 'text-danger' : 'text-success' }}">
+                                            {{ number_format($item->avance_promedio, 1) }}%
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar
+                                        {{-- Logica de Colores --}}
+                                        @if ($item->avance_promedio < 40) bg-danger
+                                        @elseif($item->avance_promedio < 80) bg-warning
+                                        @else bg-success @endif"
+                                            role="progressbar" style="width: {{ $item->avance_promedio }}%"
+                                            aria-valuenow="{{ $item->avance_promedio }}" aria-valuemin="0"
+                                            aria-valuemax="100">
                                         </div>
                                     </div>
-                                    <small class="text-muted" style="font-size: 0.7rem;">
-                                        VA: {{ number_format($va, 2) }} / VF: {{ number_format($mv, 2) }}
-                                    </small>
+                                    @if ($item->proyectos_calculados->isEmpty())
+                                        <div class="text-xs text-gray-300 fst-italic mt-1">Sin ejecución registrada</div>
+                                    @endif
                                     {{-- Contenedor de ODS vinculados --}}
                                     <div class="d-flex flex-wrap gap-1 mt-2">
                                         @if ($item->ods->count() > 0)
@@ -155,77 +126,82 @@
                                             </small>
                                         @endif
                                     </div>
-                                </td>
-                                {{-- GRUPO : ELIIMINAR - EDITAR- DCUMENTO- VALOR ACTUAL --}}
-                                <td class="text-end px-4">
-                                    <div class="btn-group shadow-sm">
-                                        {{-- BOTON ABRIR VINCULACION METAS-ODS --}}
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                            onclick="abrirVinculacionOds(this)" data-id="{{ $item->id_meta_nacional }}"
-                                            data-ods="{{ $item->ods->pluck('id_ods')->implode(',') }}"
-                                            data-nombre="{{ $item->nombre_meta }}">
-                                            <i class="fas fa-globe"></i> ODS
-                                        </button>
-                                        {{-- BOTON ABRIR MODAL SEGUIMIENTO --}}
-                                        <button type="button" class="btn btn-sm btn-info" onclick="abrirSeguimiento(this)"
-                                            data-id="{{ $item->id_meta_nacional }}"
-                                            data-unidad="{{ $item->unidad_medida }}"
-                                            data-valor="{{ $item->valor_actual ?? $item->linea_base }}">
-                                            <i class="fas fa-chart-line"></i>
-                                        </button>
-                                        {{-- BOTON MOSTRAR DOCUMENTO DE RESPALDO --}}
-                                        @if ($item->url_documento)
-                                            <a href="{{ $item->url_documento }}" target="_blank"
-                                                class="btn btn-sm btn-white text-danger border" title="Ver PDF">
-                                                <i class="fas fa-file-pdf " data-feather="file-text"></i>
+                                    </td>
+                                    {{-- ACCIONES: ELIIMINAR - EDITAR- DCUMENTO- VALOR ACTUAL --}}
+                                    <td class="text-end px-4">
+                                        <div class="btn-group shadow-sm">
+                                            <a href="{{ route('catalogos.metas.show', $item) }}"
+                                                class="btn btn-sm btn-outline-primary" title="Ver desglose de proyectos">
+                                                <i class="fas fa-project-diagram"></i> Proyectos
                                             </a>
-                                        @endif
-                                        {{-- BOTON ABRIR MODAL DE EDICION --}}
-                                        <button type="button"
-                                            class="btn btn-sm btn-white text-warning border edit-meta-btn"
-                                            onclick="abrirEditarMeta(this)" data-bs-toggle="modal"
-                                            data-bs-target="#modalEditMeta" data-id="{{ $item->id_meta_nacional }}"
-                                            data-objetivo="{{ $item->id_objetivo_nacional }}"
-                                            data-codigo="{{ $item->codigo_meta }}" data-nombre="{{ $item->nombre_meta }}"
-                                            data-descripcion="{{ $item->descripcion_meta }}"
-                                            data-indicador="{{ $item->nombre_indicador }}"
-                                            data-unidad="{{ $item->unidad_medida }}"
-                                            data-linea-base="{{ $item->linea_base }}"
-                                            data-meta-valor="{{ $item->meta_valor }}"
-                                            data-valor-actual="{{ $item->valor_actual }}"
-                                            data-url="{{ $item->url_documento }}" data-estado="{{ $item->estado }}">
-                                            <i class="fas fa-edit" data-feather="edit-2"></i>
-                                        </button>
-                                        {{-- BOTON ELIMINAR --}}
-                                        <form action="{{ route('catalogos.metas.destroy', $item->id_meta_nacional) }}"
-                                            method="POST" class="d-inline form-eliminar">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button"
-                                                class="btn btn-sm btn-white text-danger border btn-eliminar-meta">
-                                                <i class="fas fa-trash-alt" data-feather="trash-2"></i>
+                                            {{-- BOTON ABRIR VINCULACION METAS-ODS --}}
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                onclick="abrirVinculacionOds(this)" data-id="{{ $item->id_meta_nacional }}"
+                                                data-ods="{{ $item->ods->pluck('id_ods')->implode(',') }}"
+                                                data-nombre="{{ $item->nombre_meta }}">
+                                                <i class="fas fa-globe"></i> ODS
                                             </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">No hay metas registradas para este
-                                    nivel.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-                <div class="d-flex justify-content-between align-items-center mt-4 px-2">
-                    {{-- Información de resultados --}}
-                    <div class="text-muted small">
-                        Mostrando {{ $metas->firstItem() }} al {{ $metas->lastItem() }} de {{ $metas->total() }} metas
-                    </div>
+                                            @if (Auth::user()->tienePermiso('metas_pnd.gestionar'))
+                                                {{-- BOTON MOSTRAR DOCUMENTO DE RESPALDO --}}
+                                                @if ($item->url_documento)
+                                                    <a href="{{ $item->url_documento }}" target="_blank"
+                                                        class="btn btn-sm btn-white text-danger border" title="Ver PDF">
+                                                        <i class="fas fa-file-pdf" data-feather="file-text"></i>
+                                                    </a>
+                                                @endif
+                                                {{-- BOTON ABRIR MODAL DE EDICION --}}
+                                                <button type="button"
+                                                    class="btn btn-sm btn-white text-warning border edit-meta-btn"
+                                                    onclick="abrirEditarMeta(this)" data-bs-toggle="modal"
+                                                    data-bs-target="#modalEditMeta" data-id="{{ $item->id_meta_nacional }}"
+                                                    data-objetivo="{{ $item->id_objetivo_nacional }}"
+                                                    data-codigo="{{ $item->codigo_meta }}"
+                                                    data-nombre="{{ $item->nombre_meta }}"
+                                                    data-descripcion="{{ $item->descripcion_meta }}"
+                                                    data-indicador="{{ $item->nombre_indicador }}"
+                                                    data-unidad="{{ $item->unidad_medida }}"
+                                                    data-linea-base="{{ $item->linea_base }}"
+                                                    data-meta-valor="{{ $item->meta_valor }}"
+                                                    data-valor-actual="{{ $item->valor_actual }}"
+                                                    data-url="{{ $item->url_documento }}"
+                                                    data-estado="{{ $item->estado }}">
+                                                    <i class="fas fa-edit" data-feather="edit-2"></i>
+                                                </button>
+                                                {{-- BOTON ELIMINAR --}}
+                                                <form
+                                                    action="{{ route('catalogos.metas.destroy', $item->id_meta_nacional) }}"
+                                                    method="POST" class="d-inline form-eliminar">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-white text-danger border btn-eliminar-meta">
+                                                        <i class="fas fa-trash-alt" data-feather="trash-2"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">No hay metas registradas para
+                                        este
+                                        nivel.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                    <div class="d-flex justify-content-between align-items-center mt-4 px-2">
+                        {{-- Información de resultados --}}
+                        <div class="text-muted small">
+                            Mostrando {{ $metas->firstItem() }} al {{ $metas->lastItem() }} de {{ $metas->total() }}
+                            metas
+                        </div>
 
-                    {{-- Enlaces de páginas --}}
-                    <div class="pagination-clean pagination-custom mt-4">
-                        {{ $metas->links() }}
+                        {{-- Enlaces de páginas --}}
+                        <div class="pagination-clean pagination-custom mt-4">
+                            {{ $metas->links('partials.paginacion') }}
+                        </div>
                     </div>
                 </div>
             </div>

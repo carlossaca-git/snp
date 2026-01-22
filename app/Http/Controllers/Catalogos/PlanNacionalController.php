@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Catalogos;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use App\Models\Catalogos\PlanNacional;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -10,26 +10,58 @@ use Illuminate\Support\Facades\Log;
 
 class PlanNacionalController extends Controller
 {
-    // 1. LISTAR LOS PLANES
-    public function index()
+    public function __construct()
     {
-        // Ordenamos por fecha de inicio descendente (lo más nuevo primero)
+        //  Protección Base Nadie entra sin estar logueado
+        $this->middleware('auth');
 
-        $planes = PlanNacional::orderBy('periodo_inicio', 'desc')->get();
+        //  Protección de LECTURA (Solo index y show)
+        $this->middleware('permiso:pnd.ver')->only(['index', 'show']);
+
+        //  Protección de ESCRITURA (Crear, Editar, Borrar)
+        $this->middleware('permiso:pnd.gestionar')->only([
+            'create',
+            'store',
+            'edit',
+            'update',
+            'destroy'
+        ]);
+    }
+    // LISTAR LOS PLANES
+    public function index(Request $request)
+    {
+        // Capturamos el texto (si existe)
+        $busqueda = $request->input('busqueda');
+
+        // Preparamos la consulta
+        $query = PlanNacional::query();
+
+        // Si hay búsqueda, aplicamos los filtros
+        if ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
+                $q->where('nombre', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('registro_oficial', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('periodo_inicio', 'LIKE', "%{$busqueda}%")
+                    ->orWhere('periodo_fin', 'LIKE', "%{$busqueda}%");
+            });
+        }
+
+        //  Ordenamos y obtenemos los resultados
+        // Puedes cambiar ->get() por ->paginate(10) si esperas muchos planes
+        $planes = $query->orderBy('periodo_inicio', 'desc')->get();
+
         return view('dashboard.configuracion.plannacional.index', compact('planes'));
     }
 
-    // 2. MOSTRAR FORMULARIO
+    // MOSTRAR FORMULARIO
     public function create()
     {
         return view('dashboard.configuracion.plannacional.crear');
     }
 
-    // 3. GUARDAR (LOGICA DE NEGOCIO)
+    // GUARDAR (LOGICA DE NEGOCIO)
     public function store(Request $request)
     {
-        // 1. La validación va ANTES de la transacción.
-        // Si falla aquí, Laravel redirige automáticamente y no abrimos conexión innecesaria.
         $request->validate([
             'nombre' => 'required|string|max:255',
             'periodo_inicio' => 'required|integer|min:2000|max:2100',
@@ -37,7 +69,7 @@ class PlanNacionalController extends Controller
             'registro_oficial' => 'nullable|string|max:255'
         ]);
 
-        // 2. Iniciamos la Transacción
+        // Iniciamos la Transacción
         DB::beginTransaction();
 
         try {
@@ -50,13 +82,13 @@ class PlanNacionalController extends Controller
                 'estado' => 'INACTIVO' // Siempre nace inactivo por seguridad
             ]);
 
-            // Si llegamos aquí, todo salió bien. Confirmamos cambios en la BD.
+            // Confirmamos cambios en la BD.
             DB::commit();
 
             return redirect()->route('planes-nacionales.index')
                 ->with('success', 'Plan Nacional registrado exitosamente.');
         } catch (\Exception $e) {
-            // 3. Si algo falló, deshacemos TODO (Rollback)
+            // Si algo falló, deshacemos TODO (Rollback)
             DB::rollBack();
 
             // Registramos el error técnico en el archivo laravel.log (storage/logs)
@@ -68,16 +100,16 @@ class PlanNacionalController extends Controller
                 ->with('error', 'Ocurrió un error al guardar el plan. Por favor intente nuevamente.');
         }
     }
-    // ... métodos anteriores (index, create, store, activar) ...
 
-    // 5. FORMULARIO DE EDICIÓN
+
+    // FORMULARIO DE EDICIÓN
     public function edit($id)
     {
         $plan = PlanNacional::findOrFail($id);
         return view('dashboard.configuracion.plannacional.editar', compact('plan'));
     }
 
-    // 6. ACTUALIZAR DATOS
+    // ACTUALIZAR DATOS
     public function update(Request $request, $id)
     {
         // Validación
@@ -117,7 +149,7 @@ class PlanNacionalController extends Controller
         }
     }
 
-    // 4. EL SWITCH "REY DE LA COLINA"
+    // EL SWITCH "REY DE LA COLINA"
     public function activar($id)
     {
         try {

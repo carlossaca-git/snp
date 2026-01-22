@@ -15,27 +15,31 @@ use App\Models\Planificacion\Programa;
 // Importamos los modelos de los catálogos para las relaciones
 use App\Models\Institucional\TipoOrganizacion;
 use App\Models\Catalogos\Subsector;
+use App\Traits\Auditable;
 use Symfony\Component\Mime\Email;
 
 class OrganizacionEstatal extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
+    use SoftDeletes;
+    use Auditable;
 
-    // 1. Configuración de Tabla
+    // Configuración de Tabla
     protected $table = 'cat_organizacion_estatal';
     protected $primaryKey = 'id_organizacion';
     public $incrementing = true;
 
-    // 2. Fechas (Para que funcione SoftDeletes)
+    // Fechas (Para que funcione SoftDeletes)
     protected $dates = ['deleted_at'];
 
-    // 3. Asignación Masiva
+    // Asignación Masiva
     protected $fillable = [
         'id_tipo_org',
         'id_subsector',
+        'id_padre',
         'codigo_oficial',
         'nom_organizacion',
-        'nivel_gobierno', // Ej: 1=Central, 2=GAD...
+        'nivel_gobierno',
         'siglas',
         'estado',
         'mision',
@@ -51,7 +55,7 @@ class OrganizacionEstatal extends Model
      * RELACIONES
      */
 
-    // Relación: Una Organización pertenece a un Tipo (Ej: Ministerio, GAD)
+    // Relación: Una Organización pertenece a un Tipo
     public function tipo(): BelongsTo
     {
         // Asegúrate de que el modelo TipoOrganizacion exista en esa ruta
@@ -61,32 +65,43 @@ class OrganizacionEstatal extends Model
     // Relación: Una Organización pertenece a un Subsector
     public function subsector(): BelongsTo
     {
-        // Asegúrate de que el modelo Subsector exista en esa ruta
+
         return $this->belongsTo(Subsector::class, 'id_subsector', 'id_subsector');
     }
+    //Relacion: una organizacion debe tener un padre
+    public function padre()
+    {
+        return $this->belongsTo(OrganizacionEstatal::class, 'id_padre');
+    }
+    // Relacion: una organizacion debe uno o muchos hijos
+    public function hijos()
+    {
+        return $this->hasMany(OrganizacionEstatal::class, 'id_padre');
+    }
     //Objetivos estrategicos
-
+    //Relacion: Una organizacion puende tener muchos objetivos
     public function objetivos()
     {
-        // Ajusta 'id_organizacion' si tu llave foránea tiene otro nombre
+
         return $this->hasMany(ObjetivoEstrategico::class, 'id_organizacion', 'id_organizacion');
     }
 
-    // En OrganizacionEstatal.php
+    // Alineacion estrategica
+    public function alineaciones()    {
 
-    public function alineaciones()
-    {
-        // CAMBIO: En vez de Alineacion::class, usa tu modelo real
         return $this->hasMany(AlineacionEstrategica::class, 'organizacion_id', 'id_organizacion');
     }
+    //Relacion: una organizacion puede tener muchos proyectos
     public function proyectos()
     {
         return $this->hasMany(ProyectoInversion::class, 'id_organizacion');
     }
+    // Relacion: una organizacion puede tener muchos programas
     public function programas()
     {
         return $this->hasMany(Programa::class, 'id_organizacion');
     }
+    //
     public function unidadesEjecutoras()
     {
         return $this->hasMany(UnidadEjecutora::class, 'id_organizacion', 'id_organizacion');
@@ -97,10 +112,9 @@ class OrganizacionEstatal extends Model
     {
         parent::boot();
 
-        // Evento: Al eliminar (deleting)
+        //  Al eliminar
         static::deleting(function ($organizacion) {
 
-            //Borado logico de alineacions
             $organizacion->alineaciones()->delete();
             $organizacion->objetivos()->delete();
         });

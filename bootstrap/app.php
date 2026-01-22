@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Middleware\CheckPermiso;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 use App\Http\Middleware\CheckRol;
+use App\Http\Middleware\CheckAdmin;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,16 +17,20 @@ return Application::configure(basePath: dirname(__DIR__))
     // Aquí es donde unificamos todo el middleware
     ->withMiddleware(function (Middleware $middleware) {
 
-        // 1. Configuramos las redirecciones
+        //  Configuramos las redirecciones
         $middleware->redirectTo(
             guests: '/login',
             users: '/principal',
         );
 
-        // 2. Registramos TODOS los alias aquí mismo
+        // Registramos TODOS los alias aquí mismo
         $middleware->alias([
-            'admin' => \App\Http\Middleware\CheckAdmin::class,
-            'rol'   => \App\Http\Middleware\CheckRol::class, // <-- Agregamos esta línea
+            //'admin' => CheckAdmin::class,
+            //'rol'   => CheckRol::class,
+            //'permiso' => CheckPermiso::class,
+            'rol' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permiso' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
         ]);
     })
 

@@ -10,7 +10,7 @@
                 @csrf
                 @method('PUT')
 
-                {{-- INPUT OCULTO PARA EL ID (No olvides este) --}}
+                {{-- INPUT OCULTO PARA EL Id--}}
                 <input type="hidden" name="id_temp" id="edit_id_temp" value="{{ old('id_temp') }}">
 
                 <div class="modal-body">

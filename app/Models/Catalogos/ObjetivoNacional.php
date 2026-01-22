@@ -47,12 +47,16 @@ class ObjetivoNacional extends Model
     // Relación: Tiene muchos Objetivos Estratégicos
     public function objetivosEstrategicos()
     {
-        return $this->hasMany(ObjetivoEstrategico::class, 'id_objetivo_nacional', 'id_objetivo_nacional');
+        return $this->hasMany(ObjetivoEstrategico::class,
+        'id_objetivo_nacional',
+        'id_objetivo_nacional');
     }
     //Objetivo nacional
-    public function objetivoNacional()
+    public function objetivosNacionales()
     {
-        return $this->belongsTo(ObjetivoNacional::class, 'objetivo_nacional_id', 'id_objetivo_nacional');
+        return $this->belongsTo(ObjetivoNacional::class,
+        'objetivo_nacional_id',
+        'id_objetivo_nacional');
     }
 
     public function ods()

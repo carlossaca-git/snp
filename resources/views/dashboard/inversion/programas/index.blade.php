@@ -35,31 +35,39 @@
             border-bottom: 1px solid #e2e8f0;
         }
     </style>
-
-    <div class="container-fluid py-4">
-        {{-- CABECERA --}}
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h1 class="h3 fw-bold text-slate-800 mb-1">Gestión de Planes y Programas</h1>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0 small">
-                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}"
-                                class="text-decoration-none">Dashboard</a></li>
-                        <li class="breadcrumb-item text-slate-500">Gestión de Inversión</li>
-                        <li class="breadcrumb-item active fw-bold text-primary">Programas</li>
-                    </ol>
-                </nav>
-            </div>
-            <a href="{{ route('inversion.programas.create') }}"
+    <x-layouts.header_content titulo="Gestión de Planes y Programas" subtitulo="Catalogo de programas de inversion">
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ route('inversion.programas.create') }}" id="btnNuevoPrograma"
                 class="btn btn-secondary shadow-sm px-3 fw-bold d-inline-flex align-items-center"
-                data-tiene-objetivo="{{ $tieneObjetivos ? 'true' : 'false' }}" id="btnNuevoPrograma">
-                <i class="fas fa-plus me-1" data-feather="plus"></i> Nuevo Programa
+                data-tiene-objetivo="{{ $tieneObjetivos ? '1' : '0' }}"
+                data-url-crear="{{ route('estrategico.objetivos.create') }}">
+                <i class="fas fa-plus me-1"></i> Nuevo Programa
             </a>
         </div>
+    </x-layouts.header_content>
+    @include('partials.mensajes')
+    <div class="container-fluid py-2">
+        <div class="row justify-content-end align-items-end mb-2">
+                <div class="col-md-4">
+                    <form action="{{ route('inversion.programas.index') }}" method="GET">
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" name="busqueda" id="inputBusqueda"
+                                class="form-control border-start-0 border-end-0 shadow-none"
+                                placeholder="Buscar por nombre, código..." value="{{ request('busqueda') }}">
 
-        {{-- ALERTAS --}}
-        @include('partials.mensajes')
-
+                            <button type="button" id="btnLimpiarBusqueda"
+                                class="btn bg-white border border-start-0 text-danger"
+                                style="display: none; z-index: 1000 !important;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn btn-secondary" type="submit">Buscar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         <div class="card card-clean rounded-3">
             <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="mb-0 fw-bold text-slate-800">
@@ -84,7 +92,7 @@
                             @foreach ($programas as $programa)
                                 <tr class="fila-clickable"
                                     onclick="handleRowClick(event, '{{ route('inversion.programas.edit', $programa->id) }}')">
-                                    {{-- 1. CÓDIGO Y ESTADO --}}
+                                    {{--  CÓDIGO Y ESTADO --}}
                                     <td class="ps-4">
                                         <div class="fw-bold text-slate-800">{{ $programa->codigo_cup }}</div>
                                         {{-- Badge dinámico según el estado --}}
@@ -102,7 +110,7 @@
                                         </span>
                                     </td>
 
-                                    {{-- 2. NOMBRE Y FUENTE --}}
+                                    {{-- NOMBRE Y FUENTE --}}
                                     <td>
                                         <div class="fw-bold text-slate-800 mb-0">
                                             {{ Str::limit($programa->nombre_programa, 50) }}</div>
@@ -111,7 +119,7 @@
                                         </small>
                                     </td>
 
-                                    {{-- 3. VIGENCIA --}}
+                                    {{--  VIGENCIA --}}
                                     <td class="text-center">
                                         <div class="small fw-bold">{{ $programa->anio_inicio }} -
                                             {{ $programa->anio_fin }}
@@ -119,7 +127,7 @@
                                         <div class="text-muted" style="font-size: 0.7rem;">Plurianual</div>
                                     </td>
 
-                                    {{-- 4. BARRA DE EJECUCIÓN (Visualmente muy impactante) --}}
+                                    {{-- BARRA DE EJECUCIÓN --}}
                                     <td class="text-center" style="min-width: 120px;">
                                         @php
                                             $porcentaje =
@@ -135,13 +143,13 @@
                                         </div>
                                     </td>
 
-                                    {{-- 5. PRESUPUESTO --}}
+                                    {{-- PRESUPUESTO --}}
                                     <td class="text-end">
                                         <div class="fw-bold text-slate-800">
                                             ${{ number_format($programa->monto_planificado, 2) }}</div>
                                         <small class="text-muted" style="font-size: 0.7rem;">Planificado PAI</small>
                                     </td>
-                                    {{-- 6. ACCIONES --}}
+                                    {{-- ACCIONES --}}
                                     <td class="text-end pe-4 py-3">
                                         <div class="btn-group shadow-sm">
                                             <a href="{{ route('inversion.programas.edit', $programa->id) }}"
@@ -192,9 +200,6 @@
             window.location.href = url;
         }
 
-        /**
-         * Confirmación personalizada para eliminar
-         */
         function confirmDelete(event, cup) {
             event.stopPropagation(); // Evita que la fila se redireccione
             if (confirm('¿Está seguro de eliminar el programa ' + cup + '? Esta acción no se puede deshacer.')) {
@@ -202,54 +207,65 @@
             }
         }
         //Confirmacion para ir a crear objetivos estrategicos
-        document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('btnNuevoPrograma').addEventListener('click', function(e) {
+            // Obtener datos
+            var valor = this.getAttribute('data-tiene-objetivo');
+            var urlCrear = this.getAttribute('data-url-crear');
 
-        const btnNuevo = document.getElementById('btnNuevoPrograma');
+            var tieneObjetivos = (valor == '1');
 
-        if(btnNuevo){
-            btnNuevo.addEventListener('click', function(e) {
-                // 1. IMPORTANTE: Prevenir cualquier comportamiento automático
+            if (!tieneObjetivos) {
                 e.preventDefault();
-                e.stopPropagation();
-
-                // 2. Leemos el atributo (Asegúrate que coincida la escritura)
-                const tieneObjetivos = this.getAttribute('data-tiene-objetivos') === 'true';
-
-                // Debug: Mira la consola (F12) para ver si esto imprime true o false
-                console.log('¿Tiene objetivos?:', tieneObjetivos);
-
-                if (tieneObjetivos) {
-                    // ESCENARIO A: ABRIR MODAL
-                    const modalEl = document.getElementById('modalCrearPrograma');
-
-                    if(modalEl) {
-                        // Usamos getOrCreateInstance para evitar duplicados que cierran el modal
-                        const myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-                        myModal.show();
-                    } else {
-                        console.error('Error: No encuentro el modal con ID "modalCrearPrograma"');
-                        alert('Error interno: El ID del modal no coincide.');
-                    }
-
-                } else {
-                    // ESCENARIO B: MOSTRAR ALERTA
+                if (typeof Swal !== 'undefined') {
                     Swal.fire({
-                        title: 'Faltan Objetivos Estratégicos',
-                        text: "Para crear un Programa, primero necesitas definir los Objetivos Estratégicos de la institución.",
-                        icon: 'warning',
+                        icon: 'info',
+                        title: 'Requisito Previo',
+                        text: 'Para crear un Programa, primero necesita definir Objetivos Estratégicos. ¿Desea crearlos ahora?',
                         showCancelButton: true,
+                        confirmButtonText: 'Sí, ir a crear',
+                        cancelButtonText: 'Cancelar',
                         confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#74788d',
-                        confirmButtonText: 'Ir a crear Objetivos',
-                        cancelButtonText: 'Cancelar'
+                        cancelButtonColor: '#d33'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            window.location.href = "{{ route('estrategico.objetivos.create') }}";
+                            window.location.href = urlCrear;
                         }
                     });
                 }
+                else {
+                    if (confirm('Necesitas objetivos estratégicos. ¿Quieres ir a crearlos ahora?')) {
+                        window.location.href = urlCrear;
+                    }
+                }
+            }
+
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputBusqueda = document.getElementById('inputBusqueda');
+            const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
+
+            // Función para mostrar/ocultar el botón
+            function toggleLimpiarButton() {
+                if (inputBusqueda.value.trim() !== '') {
+                    btnLimpiar.style.display = 'block';
+                } else {
+                    btnLimpiar.style.display = 'none';
+                }
+            }
+
+            // Ejecutar al cargar (por si ya vienes de una búsqueda)
+            toggleLimpiarButton();
+
+            // Ejecutar cada vez que el usuario escribe
+            inputBusqueda.addEventListener('input', toggleLimpiarButton);
+
+            // Acción al hacer clic en la "X"
+            btnLimpiar.addEventListener('click', function() {
+                inputBusqueda.value = '';
+                toggleLimpiarButton();
+
+                inputBusqueda.closest('form').submit();
             });
-        }
-    });
+        });
     </script>
 @endsection

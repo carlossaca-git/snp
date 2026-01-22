@@ -6,6 +6,10 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Models\Inversion\ProyectoInversion;
+use App\Models\Planificacion\AlineacionEstrategica;
+use App\Models\Planificacion\ObjetivoEstrategico;
+
 
 class MetaNacional extends Model
 {
@@ -36,16 +40,20 @@ class MetaNacional extends Model
     public function objetivoNacional()
     {
         // Asegúrate que el segundo parámetro coincida con tu columna FK en la base de datos
-        return $this->belongsTo(ObjetivoNacional::class, 'id_objetivo_nacional', 'id_objetivo_nacional');
+        return $this->belongsTo(
+            ObjetivoNacional::class,
+            'id_objetivo_nacional',
+            'id_objetivo_nacional'
+        );
     }
-
-    /**
-     * (Opcional)  mantener la tabla de Indicadores separada
-     */
 
     public function indicadores()
     {
-        return $this->hasMany(Indicador::class, 'id_meta_pnd', 'id_meta_pnd');
+        return $this->hasMany(
+            Indicador::class,
+            'id_meta_pnd',
+            'id_meta_pnd'
+        );
     }
     // app/Models/MetaPnd.php
 
@@ -53,6 +61,39 @@ class MetaNacional extends Model
     {
         // Relación de muchos a muchos con el modelo Ods
         // Asegúrate de que los nombres de las llaves coincidan con tu tabla
-        return $this->belongsToMany(Ods::class, 'alineacion_metas_ods', 'id_meta_nacional', 'id_ods');
+        return $this->belongsToMany(
+            Ods::class,
+            'alineacion_metas_ods',
+            'id_meta_nacional',
+            'id_ods'
+        );
+    }
+    public function avances()
+    {
+        // Una meta tiene muchos avances
+        return $this->hasMany(
+            AvanceMeta::class,
+            'id_meta_nacional',
+            'id_meta_nacional'
+        );
+    }
+    public function objetivos()
+    {
+        return $this->belongsToMany(
+            ObjetivoEstrategico::class,
+            'alineacion_estrategica',
+            'meta_nacional_id',
+            'objetivo_estrategico_id',
+            'id_meta_nacional',
+            'id_objetivo_estrategico'
+        );
+    }
+    public function alineacion()
+    {
+        return $this->hasMany(
+            AlineacionEstrategica::class,
+            'meta_nacional_id',
+            'id_meta_nacional'
+        );
     }
 }

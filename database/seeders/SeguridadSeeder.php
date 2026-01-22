@@ -11,7 +11,7 @@ class SeguridadSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Crear la Organización Maestra (Secretaría Nacional de Planificación)
+        //  Crear la Organización Maestra
         // Se usa DB::table porque quizás no tengas el modelo Organización aún
         DB::table('cat_organizacion_estatal')->insertOrIgnore([
             'id_organizacion' => 1,
@@ -21,22 +21,22 @@ class SeguridadSeeder extends Seeder
             'created_at' => now(),
         ]);
 
-        // 2. Crear Roles Básicos según el caso de estudio
+        //  Crear Roles Básicos según el caso de estudio
         $roles = [
-            ['id_rol' => 1, 'nombre' => 'Administrador de TI', 'slug' => 'ADMIN_TI'],
-            ['id_rol' => 2, 'nombre' => 'Técnico de Planificación', 'slug' => 'TECNICO_PLAN'],
-            ['id_rol' => 3, 'nombre' => 'Revisor Institucional', 'slug' => 'REVISOR_SNP'],
+            ['id_rol' => 1, 'nombre_corto' => 'Administrador de TI', 'name' => 'ADMIN_TI'],
+            ['id_rol' => 2, 'nombre_corto' => 'Técnico de Planificación', 'name' => 'TECNICO_PLAN'],
+            ['id_rol' => 3, 'nombre_corto' => 'Revisor Institucional', 'name' => 'REVISOR_SNP'],
         ];
 
         foreach ($roles as $rol) {
             DB::table('seg_rol')->insertOrIgnore(array_merge($rol, ['created_at' => now()]));
         }
 
-        // 3. Crear tu Usuario SuperAdmin
+        //  Crear Usuario SuperAdmin
         $admin = User::updateOrCreate(
             ['identificacion' => '0000000000'],
             [
-                'nombres' => 'Super',
+                'nombre_cortos' => 'Super',
                 'apellidos' => 'Admin',
                 'correo_electronico' => 'cfsaca@gmail.com',
                 'usuario' => 'admin',

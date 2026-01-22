@@ -10,12 +10,14 @@ use App\Models\Catalogos\ObjetivoNacional;
 use App\Models\Catalogos\Ods;
 use App\Models\Institucional\OrganizacionEstatal;
 use App\Models\Planificacion\ObjetivoEstrategico;
-
+use App\Models\Seguridad\User;
+use App\Traits\Auditable;
 
 class AlineacionEstrategica extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use Auditable;
 
     protected $table = 'alineacion_estrategica';
     protected $primaryKey = 'id';
@@ -23,31 +25,27 @@ class AlineacionEstrategica extends Model
     protected $fillable = [
         'organizacion_id',
         'objetivo_estrategico_id',
-        'objetivo_nacional_id',
-        'ods_id',
-        'meta_pnd_id',
-        // Agregar 'user_id' o 'estado' si se usan
+        'meta_nacional_id',
+
     ];
-
-    // ==========================================
-    // RELACIONES (Para reportes y listados)
-    // ==========================================
-
     /**
-     * Relación con la Organización (Ministerio, Secretaría, etc.)
+     * Relación con la Organización
      */
+    public function usuario(){
+        return $this-> belongsTo(User::class, 'usuario_id', 'id_usuario');
+    }
     public function organizacion()
     {
         return $this->belongsTo(OrganizacionEstatal::class, 'organizacion_id', 'id_organizacion');
-        // Ajusta 'id' si la llave primaria en cat_organizacion_estatal es diferente
+
     }
 
     /**
      * Relación con el Objetivo Nacional (PND)
      */
-    public function objetivoNacional()
+    public function metaNacional()
     {
-        return $this->belongsTo(ObjetivoNacional::class, 'objetivo_nacional_id', 'id_objetivo_nacional');
+        return $this->belongsTo(MetaNacional::class, 'meta_nacional_id', 'id_meta_nacional');
     }
 
     /**
@@ -74,7 +72,4 @@ class AlineacionEstrategica extends Model
 
         return $this->belongsTo(MetaNacional::class, 'meta_pnd_id', 'id_meta_nacional');
     }
-
-
-
 }

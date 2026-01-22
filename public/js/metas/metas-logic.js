@@ -1,10 +1,3 @@
-/**
- * ARCHIVO: metas-logic.js
- * Descripción: Controla la edición, eliminación, seguimiento,
- * vinculación de ODS y búsqueda AJAX de Metas Nacionales.
- */
-
-// --- FUNCIONES DE APERTURA DE MODALES (Invocadas desde onclick en el HTML) ---
 
 /**
  * Llena y muestra el modal de edición con los datos del botón presionado
@@ -12,6 +5,7 @@
  */
 function abrirEditarMeta(boton) {
     try {
+
         const btn = $(boton); // Convertimos a objeto jQuery para facilitar lectura de data-attributes
 
         // Asignar valores a los inputs del modal usando los IDs definidos en editar.blade.php
@@ -46,9 +40,11 @@ function abrirSeguimiento(boton) {
     try {
         const id = boton.getAttribute('data-id');
         const unidad = boton.getAttribute('data-unidad');
+        const nombre = boton.getAttribute('data-nombre');
         const valor = boton.getAttribute('data-valor');
 
         document.getElementById('id_meta_seguimiento').value = id;
+        document.getElementById('avance_nombre_meta').innerText = nombre;
         document.getElementById('unidad_medida_label').innerText = unidad;
         document.getElementById('valor_actual_input').value = valor;
 
@@ -65,7 +61,7 @@ function abrirSeguimiento(boton) {
 function abrirVinculacionOds(boton) {
     try {
         const idMeta = boton.getAttribute('data-id');
-        const odsVinculados = boton.getAttribute('data-ods'); // Viene como string "1,2,5"
+        const odsVinculados = boton.getAttribute('data-ods');
         const nombreMeta = boton.getAttribute('data-nombre');
 
         // Mostrar el nombre de la meta en el título del modal
@@ -96,7 +92,7 @@ function abrirVinculacionOds(boton) {
 
 // ---  LÓGICA DE BÚSQUEDA AJAX Y NAVEGACIÓN ---
 
-let timeout = null; // Variable para controlar el retraso de la búsqueda (debounce)
+let timeout = null; // Variable para controlar el retraso de la búsqueda --debounce
 
 /**
  * Función principal para actualizar la tabla y paginación sin recargar la página
@@ -141,7 +137,7 @@ function buscarMetas(url) {
 }
 
 /**
- * Controla si el botón "X" de limpiar búsqueda debe ser visible
+ * Controla si el botón X de limpiar búsqueda debe ser visible
  */
 function actualizarVisibilidadX() {
     const inputB = document.getElementById('inputBusqueda');
@@ -157,7 +153,7 @@ function actualizarVisibilidadX() {
     }
 }
 
-// --- EVENTOS CUANDO EL DOM ESTÁ LISTO ---
+// --- EVENTOS CUANDO EL DOM ESTa LISTO
 
 document.addEventListener('DOMContentLoaded', function () {
     const inputB = document.getElementById('inputBusqueda');
@@ -177,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Lógica para el botón "X" (Limpiar)
+    // Lógica para el botón X para Limpiar
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', function () {
             inputB.value = '';
@@ -187,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Paginación AJAX: Escucha clics en los números de página
+    // Paginación AJAX Escucha clics en los números de página
     document.addEventListener('click', function (e) {
         const link = e.target.closest('.pagination-custom a');
         if (link) {

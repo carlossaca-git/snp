@@ -30,15 +30,15 @@ class Ods extends Model
 
     /**
      * Relación Inversa: Muchos a Muchos
-     * Permite saber: "¿Qué objetivos estratégicos apuntan al ODS 4?"
+     * Que objetivos estratégicos apuntan al ODS 4
      */
     public function objetivosEstrategicos()
     {
         //return $this->belongsToMany(
         //    ObjetivoEstrategico::class,
-        //    'piv_objetivo_ods',        // Nombre de la tabla intermedia
-        //    'id_ods',                  // FK de ESTE modelo en la pivote
-        //    'id_objetivo_estrategico'  // FK del OTRO modelo en la pivote
+        //    'piv_objetivo_ods',
+        //    'id_ods',
+        //    'id_objetivo_estrategico'
         //);
     }
 }
