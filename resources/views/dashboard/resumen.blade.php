@@ -455,7 +455,7 @@
                 }
             });
 
-            //  Gráfico Dona (Estados)
+            //  Grafico Dona (Estados)
             const ctxEstados = document.getElementById('chartEstados').getContext('2d');
             const dataEstadosPHP = @json($estadosDictamen);
 
@@ -516,7 +516,7 @@
             });
         });
 
-        // --- FUNCIÓN AJAX PARA FILTRAR DATOS ---
+        //FUNCIÓN AJAX PARA FILTRAR DATOS
         function filtrarDatos(rango, textoBoton) {
             // Feedback visual
             const elTexto = document.getElementById('textoFiltro');

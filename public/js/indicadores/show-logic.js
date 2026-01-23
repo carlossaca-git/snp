@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (canvas && typeof DATOS_KARDEX !== 'undefined') {
         const ctx = canvas.getContext('2d');
 
-        // Leemos los datos del "Puente" que creamos en Blade
+        // Leemos los datos desde la variable global definida en la vista
         const labels = DATOS_KARDEX.labels;
         const data = DATOS_KARDEX.values;
         const metaFinal = DATOS_KARDEX.meta;

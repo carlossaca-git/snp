@@ -5,8 +5,8 @@
  */
 function abrirEditarMeta(boton) {
     try {
-
-        const btn = $(boton); // Convertimos a objeto jQuery para facilitar lectura de data-attributes
+        // Usamos jQuery para facilitar la manipulación de atributos y valores
+        const btn = $(boton);
 
         // Asignar valores a los inputs del modal usando los IDs definidos en editar.blade.php
         $('#edit_id').val(btn.data('id'));
@@ -22,7 +22,7 @@ function abrirEditarMeta(boton) {
         $('#edit_codigo').val(btn.data('codigo'));
 
         // Construcción dinámica de la URL de actualización (update)
-        // Usamos CONFIG_METAS.urlIndex que definimos globalmente en el Blade
+        // Usamos la constante global CONFIG_METAS definida en metas.blade.php
         $('#formEditMeta').attr('action', CONFIG_METAS.urlIndex + '/' + btn.data('id'));
 
         // Mostrar el modal usando la API de Bootstrap 5
@@ -90,9 +90,10 @@ function abrirVinculacionOds(boton) {
     }
 }
 
-// ---  LÓGICA DE BÚSQUEDA AJAX Y NAVEGACIÓN ---
+//  LÓGICA DE BÚSQUEDA AJAX Y NAVEGACIÓN
 
-let timeout = null; // Variable para controlar el retraso de la búsqueda --debounce
+//  con paginación sin recargar la página
+let timeout = null;
 
 /**
  * Función principal para actualizar la tabla y paginación sin recargar la página
@@ -108,7 +109,7 @@ function buscarMetas(url) {
     contenedorTabla.style.opacity = '0.4';
 
     fetch(url, {
-        headers: { "X-Requested-With": "XMLHttpRequest" } // Indica a Laravel que es una petición AJAX
+        headers: { "X-Requested-With": "XMLHttpRequest" } // Indica que es una petición AJAX
     })
     .then(response => response.text())
     .then(html => {
@@ -163,8 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (inputB) {
         inputB.addEventListener('input', function() {
             actualizarVisibilidadX();
-
-            // Debounce: Esperamos 500ms tras la última tecla para no saturar al servidor
+            // Usamos un timeout para esperar a que el usuario termine de escribir
             clearTimeout(timeout);
             timeout = setTimeout(() => {
                 const url = CONFIG_METAS.urlIndex + "?busqueda=" + encodeURIComponent(this.value) + "&page=1";
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
         btnLimpiar.addEventListener('click', function () {
             inputB.value = '';
             actualizarVisibilidadX();
-            // Refresca la tabla a su estado original (página 1, sin filtro)
+            // Realizamos una búsqueda sin filtro
             buscarMetas(CONFIG_METAS.urlIndex + "?busqueda=&page=1");
         });
     }
@@ -187,12 +187,12 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', function (e) {
         const link = e.target.closest('.pagination-custom a');
         if (link) {
-            e.preventDefault(); // Evita la recarga normal
-            buscarMetas(link.href); // Llama a la función AJAX con la URL del link
+            e.preventDefault();    // Evitamos la recarga de página
+            buscarMetas(link.href); // Llamamos a la función AJAX con la URL del enlace
         }
     });
 
-    // Eliminación con SweetAlert2 (Usamos delegación de eventos por AJAX)
+    // ---  Eliminar con SweetAlert2
     $(document).on('click', '.btn-eliminar-meta', function (e) {
         e.preventDefault();
         const formulario = $(this).closest('form');
@@ -210,11 +210,11 @@ document.addEventListener('DOMContentLoaded', function () {
             reverseButtons: true
         }).then((result) => {
             if (result.isConfirmed) {
-                formulario.submit(); // Si confirma, enviamos el formulario DELETE de Laravel
+                formulario.submit(); // Enviamos el formulario para eliminar
             }
         });
     });
 
-    // Verificación inicial de la X por si hay texto al cargar
+    // Actualizamos la visibilidad del botón X al cargar la página
     actualizarVisibilidadX();
 });

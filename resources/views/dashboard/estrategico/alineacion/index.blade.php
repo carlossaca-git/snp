@@ -179,7 +179,7 @@
                                                     <button type="button"
                                                         class="btn btn-sm btn-light border btn-editar text-primary"
                                                         title="Editar" data-id="{{ $item->id }}"
-                                                        data-nombre-obj="{{ $item->objetivoEstrategico->nombre }}"
+                                                        data-nombre-obj="{{ $item->objetivoEstrategico?->nombre?? 'N/A' }}"
                                                         data-meta-id="{{ $item->meta_nacional_id }}" data-bs-toggle="modal"
                                                         data-bs-target="#modalEditarAlineacion">
                                                         <i class="fas fa-pencil-alt"></i>

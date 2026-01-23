@@ -3,14 +3,14 @@
  *
  */
 
-// 1. ABRIR MODAL DE EDICIÓN
+//  ABRIR MODAL DE EDICIÓN
 function abrirEditarIndicador(boton) {
     const btn = $(boton);
 
     // Asignar ruta dinámica al formulario
     $('#formEditIndicador').attr('action', CONFIG_IND.urlIndex + '/' + btn.data('id'));
 
-    // Llenar los campos (Asegúrate que los IDs coincidan con tu modal)
+    // Llenar los campos
     $('#edit_id_meta').val(btn.data('meta'));
     $('#edit_nombre_indicador').val(btn.data('nombre'));
     $('#edit_linea_base').val(btn.data('linea'));
@@ -29,7 +29,7 @@ function abrirEditarIndicador(boton) {
     modal.show();
 }
 
-// 2. FUNCIÓN MAESTRA DEL BUSCADOR (AJAX CON DOMPARSER)
+// FUNCIÓN MAESTRA DEL BUSCADOR (AJAX CON DOMPARSER)
 function buscarIndicadores(url) {
     const tbody = document.getElementById('tablaIndicadores');
     const paginacion = document.getElementById('contenedorPaginacion');
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Botón Limpiar X ---
+    // --- Botón Limpiar X
     if (btnLimpiar) {
         btnLimpiar.addEventListener('click', function () {
             inputB.value = '';
@@ -101,8 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Paginación AJAX (Delegación de eventos) ---
-    // Esto hace que los links de página 1, 2, 3 funcionen sin recargar
+    // --- Paginación AJAX Delegación de eventos
     document.addEventListener('click', function (e) {
         const link = e.target.closest('#contenedorPaginacion a');
         if (link) {
@@ -111,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ---  Eliminar con SweetAlert2 (Delegación) ---
+    // ---  Eliminar con SweetAlert2  ---
     $(document).on('click', '.btn-eliminar-indicador', function (e) {
         e.preventDefault();
 

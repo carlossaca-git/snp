@@ -13,7 +13,6 @@
             </a>
         </div>
     </x-layouts.header_content>
-
     <div class="container-fluid">
         @include('partials.mensajes')
         <div class="container mx-auto py-8">
