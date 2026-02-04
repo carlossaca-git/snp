@@ -49,8 +49,7 @@
     </style>
 
     <div class="container mx-auto py-5">
-        <x-layouts.header_content titulo="Auditoria"
-            subtitulo="Registros de actividades en el sistema ">
+        <x-layouts.header_content titulo="Auditoria" subtitulo="Registros de actividades en el sistema ">
 
             <div class="btn-toolbar mb-2 mb-md-0">
 
@@ -187,6 +186,18 @@
                     </div>
                 </div>
             @endif
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            {{-- Botón Filtrar Normal --}}
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="fas fa-filter"></i>
+            </button>
+
+            {{-- Botón Exportar PDF (Usa formaction para cambiar el destino) --}}
+            <button type="submit" formaction="{{ route('reportes.auditoria.pdf') }}" class="btn btn-danger w-100"
+                title="Exportar a PDF">
+                <i class="fas fa-file-pdf"></i>
+            </button>
         </div>
     </div>
 

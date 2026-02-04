@@ -81,83 +81,113 @@
 
         {{-- ALINEACIÓN COMPLETA (EJE -> OBJETIVO -> META) --}}
         <div class="card shadow mb-4">
-            <div class="card-header py-3 bg-gray-100">
-                <h6 class="m-0 font-weight-bold text-dark">
-                    <i class="fas fa-sitemap me-2"></i> Alineación Plan Nacional de Desarrollo
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0 align-middle">
-                        <thead class="bg-light text-uppercase text-xs text-muted">
+    <div class="card-header py-3 bg-gray-100">
+        <h6 class="m-0 font-weight-bold text-dark">
+            <i class="fas fa-sitemap me-2"></i> Alineación Plan Nacional de Desarrollo
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 align-middle">
+                <thead class="bg-light text-uppercase text-xs text-muted">
+                    <tr>
+                        <th style="width: 25%">Eje Estratégico</th>
+                        <th style="width: 30%">Objetivo Nacional</th>
+                        <th style="width: 45%">Meta Nacional Asociada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+                        // 1. AGRUPAR LAS METAS POR SU PADRE (Objetivo Nacional ID)
+                        // Esto crea grupos: [ID_1 => [Meta A, Meta B], ID_2 => [Meta C]]
+                        $grupos = $objetivo->metasNacionales->groupBy(function($meta) {
+                            return $meta->objetivoNacional->id_objetivo_nacional ?? 'sin_padre';
+                        });
+                    @endphp
+
+                    @forelse($grupos as $idObjNac => $listaMetas)
+                        {{-- Sacamos la primera meta para obtener los datos del Padre (Eje y Obj) --}}
+                        @php
+                            $primera = $listaMetas->first();
+                            $objNacional = $primera->objetivoNacional;
+                            $filas = $listaMetas->count(); // Cuántas filas ocupará este grupo
+                        @endphp
+
+                        @foreach($listaMetas as $index => $meta)
                             <tr>
-                                <th style="width: 25%">Eje Estratégico</th>
-                                <th style="width: 30%">Objetivo Nacional</th>
-                                <th style="width: 45%">Meta Nacional Asociada</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($objetivo->metasNacionales as $meta)
-                                <tr>
-                                    {{-- EJE --}}
-                                    <td>
-                                        @if ($meta->objetivoNacional && $meta->objetivoNacional->eje)
-                                            <span class="badge bg-secondary mb-1">Eje
-                                                {{ $meta->objetivoNacional->eje->id_eje ?? '#' }}</span>
-                                            <div class="small fw-bold text-dark">
-                                                {{ $meta->objetivoNacional->eje->nombre_eje ?? 'Eje sin nombre' }}
+                                {{--
+                                    LÓGICA ROWSPAN:
+                                    Solo pintamos las columnas de EJE y OBJETIVO si es la primera vuelta ($index == 0).
+                                    Le ponemos rowspan="$filas" para que abarque todas las metas de este grupo.
+                                --}}
+                                @if($index === 0)
+
+                                    {{-- COLUMNA 1: EJE ESTRATÉGICO --}}
+                                    <td rowspan="{{ $filas }}" class="bg-white" style="vertical-align: middle;">
+                                        @if ($objNacional && $objNacional->eje)
+                                            <span class="badge bg-secondary mb-2">
+                                                Eje {{ $objNacional->eje->id_eje }}
+                                            </span>
+                                            <div class="fw-bold text-dark text-wrap">
+                                                {{ $objNacional->eje->nombre_eje }}
                                             </div>
                                         @else
                                             <span class="text-muted small">--</span>
                                         @endif
                                     </td>
 
-                                    {{-- OBJETIVO NACIONAL --}}
-                                    <td>
-                                        @if ($meta->objetivoNacional)
+                                    {{-- COLUMNA 2: OBJETIVO NACIONAL --}}
+                                    <td rowspan="{{ $filas }}" class="bg-white" style="vertical-align: middle;">
+                                        @if ($objNacional)
                                             <div class="d-flex align-items-start">
-                                                <span
-                                                    class="badge bg-primary me-2 mt-1">{{ $meta->objetivoNacional->codigo_objetivo }}</span>
-                                                <span
-                                                    class="small text-muted">{{ Str::limit($meta->objetivoNacional->descripcion_objetivo, 80) }}</span>
+                                                <span class="badge bg-primary me-2 mt-1">
+                                                    {{ $objNacional->codigo_objetivo }}
+                                                </span>
+                                                <span class="small text-muted text-wrap">
+                                                    {{ $objNacional->descripcion_objetivo }}
+                                                </span>
                                             </div>
                                         @else
                                             <span class="text-muted small">--</span>
                                         @endif
                                     </td>
+                                @endif
 
-                                    {{-- META NACIONAL --}}
-                                    <td class="bg-light-soft">
-                                        <div class="d-flex align-items-start">
-                                            <i class="fas fa-bullseye text-danger mt-1 me-2"></i>
-                                            <div>
-                                                <div class="fw-bold text-dark mb-1">
-                                                    {{ $meta->codigo_meta }}
-                                                </div>
-                                                <a href="{{ route('catalogos.metas.show', $meta->id_meta_nacional) }}"
-                                                    class="text-primary small text-decoration-none">
-                                                    {{ $meta->nombre_meta }} <i
-                                                        class="fas fa-external-link-alt ms-1 text-xs"></i>
-                                                </a>
+                                {{-- COLUMNA 3: META (Esta siempre se pinta, una por fila) --}}
+                                <td class="bg-light-soft">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-bullseye text-danger mt-1 me-2"></i>
+                                        <div>
+                                            <div class="fw-bold text-dark mb-1">
+                                                {{ $meta->codigo_meta }}
                                             </div>
+                                            <a href="{{ route('catalogos.metas.show', $meta->id_meta_nacional) }}"
+                                               class="text-primary small text-decoration-none">
+                                                {{ $meta->nombre_meta }}
+                                                <i class="fas fa-external-link-alt ms-1 text-xs"></i>
+                                            </a>
                                         </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-center py-4 text-muted">
-                                        <i class="fas fa-unlink fa-lg mb-2"></i><br>
-                                        Sin alineación registrada al PND.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
 
-        {{-- SECCIÓN 3: PROYECTOS (Igual que antes) --}}
+                    @empty
+                        {{-- CASO VACÍO --}}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="fas fa-unlink fa-lg mb-2"></i><br>
+                                Sin alineación registrada al PND.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+        {{-- PROYECTOS  --}}
         <div class="card shadow mb-4">
             <div class="card-header py-3 bg-white">
                 <h6 class="m-0 font-weight-bold text-dark">Proyectos de Inversión Vinculados</h6>

@@ -17,7 +17,7 @@
                             <input type="text" name="codigo_objetivo" id="edit_pnd_codigo" class="form-control"
                                 required>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-8 mb-3">
                             <label class="form-label fw-bold">Eje Estratégico</label>
                             <select name="id_eje" id="edit_pnd_eje" class="form-select" required>
                                 <option value="">Seleccione...</option>
@@ -25,16 +25,6 @@
                                     <option value="{{ $eje->id_eje }}">{{ $eje->nombre_eje }}</option>
                                 @endforeach
                             </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold">Año Inicio</label>
-                            <input type="number" name="periodo_inicio" id="edit_pnd_inicio" class="form-control"
-                                placeholder="Ej: 2021">
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label fw-bold">Año Fin</label>
-                            <input type="number" name="periodo_fin" id="edit_pnd_fin" class="form-control"
-                                placeholder="Ej: 2025">
                         </div>
                     </div>
                     <div class="mb-3">

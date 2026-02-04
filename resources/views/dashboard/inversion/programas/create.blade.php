@@ -31,35 +31,46 @@
 </style>
 @section('content')
     <x-layouts.header_content titulo="Nuevo Programa de Inversión" subtitulo="Registro en el Plan Anual de Inversiones">
-        <div class="btn-toolbar mb-2 mb-md-0">
-            <a href="{{ route('inversion.programas.index') }}" class="btn btn-outline-secondary btn-sm px-3">
-                <i class="fas fa-arrow-left me-1"></i> Cancelar y Volver
-            </a>
-        </div>
+        <a href="{{ route('inversion.programas.create') }}" class="btn btn-outline-secondary align-items-center"
+            title="Proyectos">
+            <i class="fas fa-home me-1"></i>Nuevo
+        </a>
+        <button type="button" class="btn btn-secondary" onclick="history.back()">
+            <i class="fas fa-arrow-left me-1"></i> Atras
+        </button>
 
     </x-layouts.header_content>
     @include('partials.mensajes')
     <div class="container-fluid py-4">
 
-        <form action="{{ route('inversion.programas.store') }}" method="POST">
+        <form action="{{ route('inversion.programas.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             <div class="row g-4">
                 {{--  DATOS GENERALES --}}
                 <div class="col-lg-7">
                     <div class="card card-clean rounded-3 h-100">
+                        <div class="alert alert-info border-info d-flex align-items-center mb-4 px-3" role="alert">
+                            <i class="fas fa-info-circle me-2 fs-4"></i>
+                            <div>
+                                Registro de programa para el <strong>Plan Anual {{ $planInversion->anio }}</strong>
+                                <br>
+                                <small>Fechas válidas: {{ $planInversion->fecha_inicio_fiscal->format('d/m/Y') }} al
+                                    {{ $planInversion->fecha_fin_fiscal->format('d/m/Y') }}</small>
+                            </div>
+                        </div>
                         <div class="card-body p-4">
-                            <h6 class="section-title">I. Identificación del Programa</h6>
+                            <h6 class="section-title">1. Identificación del Programa</h6>
 
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Código CUP</label>
-                                    <input type="text" name="cup" value="{{ old('cup') }}"
+                                    <input type="text" name="codigo_programa" value="{{ old('codigo_programa') }}"
                                         class="form-control" placeholder="Ej: 2024-001" required>
                                     <small class="text-muted" style="font-size: 0.65rem;">Código Único de
                                         Proyecto/Programa</small>
                                 </div>
-
+                                <input type="hidden" name="plan_id" value="{{ $planInversion->id }}">
                                 <div class="col-md-8">
                                     <label class="form-label">Nombre del Programa</label>
                                     <input type="text" name="nombre_programa" value="{{ old('nombre_programa') }}"
@@ -73,11 +84,11 @@
 
                                 <div class="col-md-6">
                                     <label class="form-label">Sector de Inversión</label>
-                                    <select name="id_sector" class="form-select" required>
+                                    <select name="sector" class="form-select" required>
                                         <option value="">Seleccione Sector...</option>
-                                        <option value="1">Social</option>
-                                        <option value="2">Económico</option>
-                                        <option value="3">Infraestructura</option>
+                                        <option value="SOCIAL">Social</option>
+                                        <option value="ECONOMICO">Económico</option>
+                                        <option value="INFRAESTRUCTURA">Infraestructura</option>
                                     </select>
                                 </div>
 
@@ -90,6 +101,29 @@
                                         <option value="CANTONAL">Cantonal</option>
                                     </select>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Tipo de Programa</label>
+                                    <select name="tipo_programa" class="form-select" required>
+                                        <option value="" selected disabled>-- Seleccione --</option>
+                                        <option value="INVERSION"
+                                            {{ old('tipo_programa') == 'INVERSION' ? 'selected' : '' }}>
+                                            Inversión (Obra Pública)
+                                        </option>
+                                        <option value="GASTO_CORRIENTE"
+                                            {{ old('tipo_programa') == 'GASTO_CORRIENTE' ? 'selected' : '' }}>
+                                            Gasto Corriente (Administrativo)
+                                        </option>
+                                        <option value="CAPITAL_HUMANO"
+                                            {{ old('tipo_programa') == 'CAPITAL_HUMANO' ? 'selected' : '' }}>
+                                            Capital Humano (Capacitación)
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Documento Habilitante (Resolución/Acta)</label>
+                                    <input type="file" name="documento_habilitante" class="form-control" accept=".pdf">
+                                    <div class="form-text">Subir en formato PDF (Máx. 10MB).</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -98,20 +132,29 @@
                 <div class="col-lg-5">
                     <div class="card card-clean rounded-3 mb-4">
                         <div class="card-body p-4">
-                            <h6 class="section-title">II. Vigencia y Presupuesto</h6>
+                            <h6 class="section-title">2. Vigencia y Presupuesto</h6>
 
                             <div class="row g-3">
                                 <div class="col-6">
-                                    <label class="form-label">Año Inicio</label>
-                                    <input type="number" name="anio_inicio" value="{{ date('Y') }}"
-                                        class="form-control" required>
+                                    <label class="form-label fw-bold ">Fecha Inicio</label>
+                                    <input type="date" name="fecha_inicio" class="form-control"
+                                        min="{{ $planInversion?->anio }}-01-01" max="{{ $planInversion?->anio }}-12-31"
+                                        value="{{ $planInversion?->anio }}-01-01" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label">Año Fin</label>
-                                    <input type="number" name="anio_fin" value="{{ date('Y') + 4 }}" class="form-control"
-                                        required>
+                                    <label class="form-label fw-bold">Fecha Fin</label>
+                                    <input type="date" name="fecha_fin" class="form-control"
+                                        min="{{ $planInversion?->anio }}-01-01" max="{{ $planInversion?->anio }}-12-31"
+                                        value="{{ $planInversion?->anio }}-12-31" required>
                                 </div>
-
+                                <div class="col-12">
+                                    <label class="form-label">Monto Asignado ($)</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light">$</span>
+                                        <input type="number" step="0.01" name="monto_asignado"
+                                            class="form-control fw-bold" placeholder="0.00" required>
+                                    </div>
+                                </div>
                                 <div class="col-12">
                                     <label class="form-label">Monto Total Planificado ($)</label>
                                     <div class="input-group">
@@ -120,7 +163,6 @@
                                             class="form-control fw-bold" placeholder="0.00" required>
                                     </div>
                                 </div>
-
                                 <div class="col-12">
                                     <label class="form-label">Fuente de Financiamiento</label>
                                     <select name="id_fuente" class="form-select" required>
@@ -138,7 +180,7 @@
 
                     <div class="card card-clean rounded-3">
                         <div class="card-body p-4">
-                            <h6 class="section-title text-success" style="border-left-color: #10b981;">III. Alineación
+                            <h6 class="section-title text-success" style="border-left-color: #10b981;">3. Alineación
                                 Estratégica</h6>
                             <div class="mb-3">
                                 <label class="form-label small">Objetivo Estratégico Institucional</label>

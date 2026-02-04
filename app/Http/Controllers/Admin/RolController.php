@@ -49,21 +49,20 @@ class RolController extends Controller
             ->whereNull('deleted_at') // Respetamos el SoftDelete manualmente
             ->get();
         //Obtenemos todos los permisos agrupados
-        $permisosAgrupados = Permisos::select('id_permiso', 'nombre', 'nombre_corto', 'modulo', 'descripcion')
+        $permisosAgrupados = Permisos::select('id_permiso', 'name', 'nombre_corto', 'modulo', 'descripcion')
             ->get()
             ->groupBy('modulo');
         //Retornamos a la vista
         $permisosAgrupados = $permisos->groupBy('modulo');
 
         return view('dashboard.admin.roles.create', compact('permisosAgrupados'));
-        //return view('dashboard.admin.roles.create', compact('permisosAgrupados'));
     }
     //METODO STORE
     public function store(Request $request)
     {
         // Validar
         $request->validate([
-            'nombre' => 'required|string|max:50|unique:seg_rol,nombre_corto',
+            'nombre_corto' => 'required|string|max:50|unique:seg_rol,nombre_corto',
             'permisos' => 'required|array'
         ]);
 
@@ -71,9 +70,9 @@ class RolController extends Controller
         try {
             // Crear el Rol
             $rol = new Rol();
-            $rol->nombre = $request->nombre;
+            $rol->nombre_corto = $request->nombre_corto;
             // Generamos nombre_corto automático "Jefe Financiero" "jefe-financiero"
-            $rol->nombre_corto = Str::nombre_corto($request->nombre);
+            $rol->name = Str::slug($request->nombre_corto);
             $rol->descripcion = $request->descripcion;
             $rol->save();
 

@@ -15,7 +15,7 @@ class PlanNacionalController extends Controller
         //  Protección Base Nadie entra sin estar logueado
         $this->middleware('auth');
 
-        //  Protección de LECTURA (Solo index y show)
+        //  Protección de LECTURA (Listar, Ver)
         $this->middleware('permiso:pnd.ver')->only(['index', 'show']);
 
         //  Protección de ESCRITURA (Crear, Editar, Borrar)
@@ -43,7 +43,7 @@ class PlanNacionalController extends Controller
                     ->orWhere('registro_oficial', 'LIKE', "%{$busqueda}%")
                     ->orWhere('periodo_inicio', 'LIKE', "%{$busqueda}%")
                     ->orWhere('periodo_fin', 'LIKE', "%{$busqueda}%");
-            });
+            })->orderBy('periodo_inicio', 'asc');
         }
 
         //  Ordenamos y obtenemos los resultados
@@ -79,7 +79,7 @@ class PlanNacionalController extends Controller
                 'periodo_inicio' => $request->periodo_inicio,
                 'periodo_fin' => $request->periodo_fin,
                 'registro_oficial' => $request->registro_oficial,
-                'estado' => 'INACTIVO' // Siempre nace inactivo por seguridad
+                'estado' => 'INACTIVO'
             ]);
 
             // Confirmamos cambios en la BD.
@@ -92,11 +92,11 @@ class PlanNacionalController extends Controller
             DB::rollBack();
 
             // Registramos el error técnico en el archivo laravel.log (storage/logs)
-            Log::error('Error creando Plan Nacional: ' . $e->getMessage());
+           // Log::error('Error creando Plan Nacional: ' . $e->getMessage());
 
             // Devolvemos al usuario al formulario con un mensaje amigable
             return back()
-                ->withInput() // Mantiene lo que el usuario escribió
+                ->withInput()
                 ->with('error', 'Ocurrió un error al guardar el plan. Por favor intente nuevamente.');
         }
     }

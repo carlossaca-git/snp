@@ -11,7 +11,7 @@
     </x-layouts.header_content>
 
     @include('partials.mensajes')
-    {{-- FORMULARIO DE BUSQUEDA --}}
+    {{-- BUSQUEDA --}}
     <div class="container mx-auto py-8">
         <div class="row justify-content-end align-items-end mb-2">
             <div class="col-md-4">
@@ -43,7 +43,7 @@
                                 <th>Nombre del Eje</th>
                                 <th>Descripción</th>
                                 <th class="text-center">Objetivos Asoc.</th>
-                                <th class="text-center">Periodo</th>
+                                <th >Periodo</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-end px-4">Acciones</th>
                             </tr>
@@ -58,13 +58,15 @@
                                         {{ Str::limit($item->descripcion, 50) }}
                                     </td>
                                     <td class="text-center">
-                                        {{-- Usamos la relación para contar --}}
                                         <span class="badge bg-light text-dark border">
                                             {{ $item->objetivos_nacionales_count ?? 0 }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        {{ $item->periodo_inicio }} - {{ $item->periodo_fin }}
+                                        <div class="small text-muted">
+                                            <i class="far fa-calendar-alt"></i>{{ $item->plan?->periodo_inicio }} -
+                                            {{ $item->plan?->periodo_fin }}
+                                        </div>
                                     </td>
                                     <td class="text-center">
                                         <span
@@ -74,23 +76,20 @@
                                     </td>
                                     {{-- ACCIONES --}}
                                     <td class="text-end px-4">
-
+                                        <div class="btn-group shadow-sm">
                                         @if (!empty($item->url_documento))
-                                            {{-- Si el campo tiene contenido, mostramos el botón rojo de PDF --}}
                                             <a href="{{ $item->url_documento }}" target="_blank"
                                                 class="btn btn-sm btn-danger" title="Ver Documento">
                                                 <i class="fas fa-file-pdf" data-feather="file-text"
                                                     style="width: 16px; height: 16px;"></i>
                                             </a>
                                         @else
-                                            {{-- Si está vacío, mostramos un icono gris que no hace nada --}}
                                             <span class="text-muted" title="No hay documento cargado">
                                                 <i class="fas fa-file-slash opacity-80" data-feather="file"></i>
                                             </span>
                                         @endif
                                         {{-- Botones eliminar y editar --}}
                                         @if (Auth::user()->tienePermiso('ejes.gestionar'))
-                                            <div class="btn-group shadow-sm">
                                                 @can('ejes.ver')
                                                     <button type="button" class="btn btn-sm btn-warning btn-edit-eje"
                                                         data-id="{{ $item->id_eje }}" data-nombre="{{ $item->nombre_eje }}"
@@ -131,13 +130,10 @@
     @include('dashboard.configuracion.ejes.editar')
 @endsection
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-
-            // ==========================================
-            // 1. LÓGICA DEL BUSCADOR (Corregido)
-            // ==========================================
+            // LÓGICA DEL BUSCADOR (Corregido)
             const inputBusqueda = document.getElementById('inputBusqueda');
             const btnLimpiar = document.getElementById('btnLimpiarBusqueda');
 
@@ -160,46 +156,19 @@
                     inputBusqueda.closest('form').submit();
                 });
             }
-
-            // ==========================================
-            // 2. VALIDACIÓN FORMULARIO CREAR
-            // ==========================================
-            const formCreate = document.getElementById('formCreateEje');
-            if (formCreate) {
-                formCreate.addEventListener('submit', function(e) {
-                    const inicio = parseInt(document.getElementById('create_periodo_inicio').value);
-                    const fin = parseInt(document.getElementById('create_periodo_fin').value);
-
-                    // Corregido el error de sintaxis "script script"
-                    if (fin < inicio) {
-                        e.preventDefault();
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Periodo inválido',
-                            text: 'El año de fin no puede ser menor al año de inicio.',
-                            confirmButtonColor: '#3085d6'
-                        });
-                    }
-                });
-            }
-
-            // ==========================================
-            // 3. ERRORES DE LARAVEL (Abrir Modal)
-            // ==========================================
+            // ERRORES DE LARAVEL (Abrir Modal)
             @if ($errors->any())
                 const modalCreateEl = document.getElementById('modalCreateEje');
-                if(modalCreateEl){
+                if (modalCreateEl) {
                     const modalCreate = bootstrap.Modal.getOrCreateInstance(modalCreateEl);
                     modalCreate.show();
                 }
             @endif
 
-            // ==========================================
-            // 4. DELEGACIÓN DE EVENTOS (Clicks dinámicos)
-            // ==========================================
+            // DELEGACIÓN DE EVENTOS -- EDITAR Y ELIMINAR
             document.addEventListener('click', function(event) {
 
-                // --- A. BOTÓN EDITAR ---
+                // BOTON EDITAR
                 const btnEdit = event.target.closest('.btn-edit-eje');
                 if (btnEdit) {
                     // Mapeo de datos
@@ -227,8 +196,7 @@
                     const modalEl = document.getElementById('modalEditEje');
                     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
                 }
-
-                // --- B. BOTÓN ELIMINAR ---
+                // ---  BOTÓN ELIMINAR
                 const btnDelete = event.target.closest('.btn-delete');
                 if (btnDelete) {
                     event.preventDefault();

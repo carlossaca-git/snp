@@ -16,7 +16,7 @@
                         <div class="col-12 mb-3">
                             <input type="hidden" name="id_meta_nacional" id="id">
                             <label class="form-label fw-bold">1. Objetivo Nacional Vinculado</label>
-                            <select name="id_objetivo_nacional" id="id_objetivo_editar" class="form-select" required>
+                            <select name="objetivo_nacional_id" id="id_objetivo_editar" class="form-select" required>
                                 <option value="" disabled>-- Seleccione el Objetivo --</option>
                                 @foreach ($objetivos as $obj)
                                     <option value="{{ $obj->id_objetivo_nacional }}">
@@ -56,7 +56,6 @@
                                     <option value="Megavatios (MW)" >Megavatios (MW)</option>
                                     <option value="Relación 1:1000" >Realacion 1:1000</option>
                                     <option value="Puesto Mundial">Puesto Mundial</option>
-
                                 </select>
                             </div>
 

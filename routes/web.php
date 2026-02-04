@@ -26,14 +26,18 @@ use App\Models\Catalogos\MetaNacional;
 
 //  Institucional y Planificación
 use App\Http\Controllers\Institucional\OrganizacionController;
+use App\Http\Controllers\Institucional\UnidadEjecutoraController;
 use App\Http\Controllers\Planificacion\AlineacionController;
 use App\Http\Controllers\Planificacion\ObjetivoEstrategicoController;
+use App\Http\Controllers\Planificacion\PlanInstitucionalController;
 
 //  Inversión (Proyectos)
+use App\Http\Controllers\Inversion\PlanInversionController;
 use App\Http\Controllers\Inversion\ProgramaController;
 use App\Http\Controllers\Inversion\ProyectoController;
 use App\Http\Controllers\Inversion\MarcoLogicoController;
-use App\Http\Controllers\Planificacion\PlanInstitucionalController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -53,7 +57,7 @@ Route::get('/', function () {
 */
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // ---  DASHBOARD Y PERFIL (Acceso para todos los logueados) ---
+    //  DASHBOARD Y PERFIL (Acceso para todos los logueados)
     Route::get('/principal', [DashboardController::class, 'index'])->name('dashboard');
 
 
@@ -97,6 +101,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('objetivos', ObjetivoNacionalController::class);
         // ODS
         Route::resource('ods', OdsController::class);
+        Route::get('reportes/alineacion-ods', [OdsController::class, 'reporteAlineacion'])
+            ->name('reportes.alineacion');
         // METAS
         Route::post('metas/vincular-ods', [MetaNacionalController::class, 'vincularOds'])
             ->name('metas.vincular');
@@ -124,14 +130,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('indicadores.kardex');
         // Estándar
         Route::resource('indicadores', IndicadorController::class);
-
-        //Actualizar avances de indicadores
-        Route::post('indicadores/guardar-avance', [AvanceIndicadorController::class, 'store'])
-            ->name('indicadores.avances.store');
     });
 
     // =========================================================================
-    //          ESTRATÉGICO:Institucional y Alineación
+    //          ESTRATEGICO:Institucional y Alineación
     // =========================================================================
     Route::prefix('institucional')->name('institucional.')->group(function () {
 
@@ -144,6 +146,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('api.sectores');
         Route::get('/api/subsectores/{id_sector}', [OrganizacionController::class, 'getSubsectores'])
             ->name('api.subsectores');
+        //Unidades ejecutoras
+        Route::resource('unidades', UnidadEjecutoraController::class);
     });
 
     Route::prefix('estrategico')->name('estrategico.')->middleware(['permiso:planificacion.gestionar'])->group(function () {
@@ -153,10 +157,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/planes/{idPlan}/objetivos', [ObjetivoEstrategicoController::class, 'index'])
             ->name('planificacion.objetivos.index');
 
-        // GRUPO 1: Alineación
+        // GRUPO Alineación
         Route::prefix('alineacion')->name('alineacion.')->controller(AlineacionController::class)->group(function () {
             Route::resource('general', AlineacionController::class);
-            // Rutas personalizadas (Recomendado si usas URLs en español como 'gestionar')
+            // Rutas personalizadas
             Route::get('/{organizacion_id}/gestionar', 'index')->name('gestionar');
             Route::post('/{organizacion_id}/guardar', 'store')->name('guardar');
             Route::put('/{id}/actualizar', 'update')->name('actualizar');
@@ -165,6 +169,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             // Rutas adicionales
             Route::post('/objetivos-ajax', 'storeObjetivoAjax')->name('objetivos-ajax');
             Route::get('/{id}', 'show')->name('show');
+            // Ruta para obtener el árbol de alineación (Metas + Indicadores) vía AJAX
+            Route::get('/api/objetivos/{id}/arbol-alineacion', [ProyectoController::class, 'getArbolAlineacion'])
+                ->name('api.objetivos.arbol');
         });
 
 
@@ -176,10 +183,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =========================================================================
-    //           INVERSIÓN - PROYECTOS - GRANULARIDAD PURA
+    //           INVERSIÓN - PROYECTOS -
     // =========================================================================
     Route::prefix('inversion')->name('inversion.')->group(function () {
-
+        // --- SUBMDULO DE PLANES DE INVERSIÓN
+        Route::resource('planes', PlanInversionController::class);
+        // --- SUBMDULO DE PROGRAMAS
         Route::resource('programas', ProgramaController::class);
 
         // --- SUBMDULO DE PROYECTOS
@@ -211,6 +220,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('/{id}', 'show')
                     ->middleware('permiso:proyectos.ver')
                     ->name('show');
+                //Ruta para cambiar el dictamen del proyecto
+                Route::post('/proyectos/{id}/dictamen', [ProyectoController::class, 'updateDictamen'])
+                    ->name('dictamen');
 
                 // Ruta para ver el tablero del Marco Lógico
                 Route::get('/{id}/marco-logico', [MarcoLogicoController::class, 'index'])
@@ -218,10 +230,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 // Rutas para guardar elementos (Propósito, Componentes, Actividades)
                 Route::post('/marco-logico/guardar', [MarcoLogicoController::class, 'store'])
                     ->name('marco-logico.store');
-                //Ruta para actualizar
+                //Ruta para actualizarelementos (Propósito, Componentes, Actividades)
                 Route::put('/marco-logico/{id}', [MarcoLogicoController::class, 'update'])
                     ->name('marco-logico.update');
-                //Ruta para reportar avance
+                //Ruta para reportar avance actividades
                 Route::post('/avance', [MarcoLogicoController::class, 'storeAvance'])
                     ->name('registrar-avance.store');
                 //Ruta para eliminar
@@ -231,7 +243,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // =========================================================================
-    //                  REPORTES (Solo lectura)
+    //                  REPORTES
     // =========================================================================
     Route::prefix('reportes')->name('reportes.')->middleware(['permiso:reportes.ver'])->group(function () {
         Route::get('/proyectos-general', [DashboardController::class, 'reporteGeneral'])
@@ -242,6 +254,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/filtrar', [DashboardController::class, 'filtrarDatos'])->name('dashboard.filtrar');
         Route::get('/indicadores/{id}/pdf', [IndicadorController::class, 'generarPdf'])->name('catalogos.indicadores.pdf');
+
+        Route::get('auditoria/pdf', [AuditoriaController::class, 'exportarPdf'])
+            ->name('auditoria.pdf');
     });
 });
 

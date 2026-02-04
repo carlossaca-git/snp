@@ -28,25 +28,13 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Año Inicio</label>
-                            <input type="number" name="periodo_inicio" class="form-control" placeholder="2021"
-                                required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Año Fin</label>
-                            <input type="number" name="periodo_fin" class="form-control" placeholder="2025" required>
-                        </div>
-                    </div>
-
                     <div class="mb-3">
                         <label class="form-label fw-bold">Descripción del Objetivo</label>
                         <textarea name="descripcion_objetivo" class="form-control" rows="4"
                             placeholder="Escriba la descripción detallada del objetivo..." required></textarea>
                     </div>
 
-                    {{-- El estado por defecto será Activo (1) --}}
+                    {{-- El estado por defecto será Activo --}}
                     <input type="hidden" name="estado" value="1">
                 </div>
                 <div class="modal-footer bg-light">

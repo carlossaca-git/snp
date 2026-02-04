@@ -12,16 +12,13 @@
         <div class="col-md-4">
             <form action="{{ route('catalogos.planes-nacionales.index') }}" method="GET">
                 <div class="input-group shadow-sm">
-
                     <span class="input-group-text bg-white border-end-0 text-muted">
                         <i class="fas fa-search"></i>
                     </span>
-
                     {{-- Buqueda --}}
                     <input type="text" name="busqueda" id="inputBusqueda"
                         class="form-control border-start-0 border-end-0 shadow-none"
                         placeholder="Buscar por nombre, código..." value="{{ request('busqueda') }}">
-
                     {{-- Botón X Limpiar --}}
                     <button type="button" id="btnLimpiarBusqueda"
                         class="btn bg-white border-top border-bottom border-end-0 text-danger"

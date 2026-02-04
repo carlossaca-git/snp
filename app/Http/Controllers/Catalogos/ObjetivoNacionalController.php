@@ -20,7 +20,7 @@ class ObjetivoNacionalController extends Controller
         //  Protección Base Nadie entra sin estar logueado
         $this->middleware('auth');
 
-        //  Protección de LECTURA (Solo index y show)
+        //  Protección de LECTURA (Listar, Ver)
         $this->middleware('permiso:objetivos.ver')->only(['index', 'show']);
 
         //  Protección de ESCRITURA (Crear, Editar, Borrar)
@@ -32,10 +32,6 @@ class ObjetivoNacionalController extends Controller
             'destroy'
         ]);
     }
-
-    /**
-     * Muestra la lista de objetivos del PND.
-     */
     /**
      * Muestra la lista de objetivos del PND.
      */
@@ -44,7 +40,7 @@ class ObjetivoNacionalController extends Controller
         // Capturamos el texto
         $busqueda = $request->input('busqueda');
 
-        // Iniciamos la consulta cargando la relación 'eje'
+        // Iniciamos la consulta cargando la relación con Eje
         $query = ObjetivoNacional::with('eje');
 
         // Aplicamos filtros si hay búsqueda
@@ -60,7 +56,7 @@ class ObjetivoNacionalController extends Controller
                     });
             });
         }
-        // Ordenamos por código para que salgan 1, 2, 3...
+        // Ordenamos y paginamos los resultados
         $pnd = $query->orderBy('codigo_objetivo', 'asc')
             ->paginate(10)
             ->appends(['busqueda' => $busqueda]);
@@ -68,19 +64,19 @@ class ObjetivoNacionalController extends Controller
         // Cargamos la lista de ejes para el MODAL de crear/editar (sin filtrar)
         $relEje = EjePND::where('estado', 1)->get();
 
-        return view('dashboard.configuracion.pnd.index', compact('pnd', 'relEje'));
+        return view('dashboard.configuracion.objetivos.index', compact('pnd', 'relEje'));
     }
 
     /**
-     * Formulario para crear un nuevo objetivo nacional (PND).
+     * Formulario para crear un nuevo objetivo nacional
      */
     public function create()
     {
-        // Si manejas ejes del PND (Social, Económico, etc.), pásalos a la vista
-        // $ejes = EjePnd::all();
-        // return view('configuracion.pnd.crear', compact('ejes'));
 
-        return view('configuracion.pnd.crear');
+         $ejes = EjePnd::all();
+
+
+        return view('configuracion.objetivos.crear', compact('ejes'));
     }
 
     /**
@@ -92,8 +88,6 @@ class ObjetivoNacionalController extends Controller
             'codigo_objetivo'      => 'required|unique:cat_objetivo_nacional,codigo_objetivo',
             'descripcion_objetivo' => 'required',
             'id_eje'               => 'required|exists:cat_eje_pnd,id_eje',
-            'periodo_inicio'       => 'required|integer',
-            'periodo_fin'          => 'required|integer',
             'estado'               => 'required|in:1,0',
         ]);
         try {
@@ -101,7 +95,7 @@ class ObjetivoNacionalController extends Controller
             DB::beginTransaction();
             ObjetivoNacional::create($request->all());
             DB::commit();
-            return redirect()->route('configuracion.pnd.index')
+            return redirect()->route('catalogos.objetivos.index')
                 ->with('success', 'Objetivo Nacional registrado exitosamente en el PND.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -118,7 +112,7 @@ class ObjetivoNacionalController extends Controller
     public function edit($id)
     {
         $objetivo = ObjetivoNacional::findOrFail($id);
-        return view('configuracion.pnd.editar', compact('objetivo'));
+        return view('configuracion.objetivos.editar', compact('objetivo'));
     }
 
     /**
@@ -133,14 +127,12 @@ class ObjetivoNacionalController extends Controller
             'codigo_objetivo'      => 'required|string|max:50',
             'descripcion_objetivo' => 'required|string',
             'id_eje'               => 'required|exists:cat_eje_pnd,id_eje',
-            'periodo_inicio'       => 'nullable|integer|min:2000|max:2100',
-            'periodo_fin'          => 'nullable|integer|min:2000|max:2100',
             'estado'               => 'required|in:1,0',
         ]);
         $pnd = ObjetivoNacional::findOrFail($id);
         $objetivo->update($request->all());
 
-        return redirect()->route('configuracion.pnd.index')
+        return redirect()->route('catalogos.objetivos.index')
             ->with('success', 'Objetivo Nacional actualizado correctamente.');
     }
 
@@ -153,10 +145,10 @@ class ObjetivoNacionalController extends Controller
 
         try {
             $objetivo->delete();
-            return redirect()->route('Configuracion.pnd.index')
+            return redirect()->route('catalogos.objetivos.index')
                 ->with('success', 'Objetivo eliminado del catálogo.');
         } catch (\Exception $e) {
-            return redirect()->route('configuracion.pnd.index')
+            return redirect()->route('catalogos.objetivos.index')
                 ->with('error', 'No se puede eliminar porque tiene objetivos estratégicos asociados.');
         }
     }

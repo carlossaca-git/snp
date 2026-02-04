@@ -40,13 +40,13 @@
                                 name="pilar">
                                 <option value="" selected disabled>Seleccione una opción...</option>
 
-                                <option value="Personas" {{ old('pilar') == 'Personas' ? 'selected' : '' }}>Personas
+                                <option value="Social" {{ old('pilar') == 'Social' ? 'selected' : '' }}>Personas
                                     (Social)</option>
-                                <option value="Planeta" {{ old('pilar') == 'Planeta' ? 'selected' : '' }}>Planeta
+                                <option value="Ambiental" {{ old('pilar') == 'Ambiental' ? 'selected' : '' }}>Planeta
                                     (Ambiental)</option>
-                                <option value="Prosperidad" {{ old('pilar') == 'Prosperidad' ? 'selected' : '' }}>
+                                <option value="Económico" {{ old('pilar') == 'Económico' ? 'selected' : '' }}>
                                     Prosperidad (Económico)</option>
-                                <option value="Paz" {{ old('pilar') == 'Paz' ? 'selected' : '' }}>Paz (Institucional)
+                                <option value="Paz" {{ old('pilar') == 'Paz' ? 'selected' : '' }}>Paz (Justicia)
                                 </option>
                                 <option value="Alianzas" {{ old('pilar') == 'Alianzas' ? 'selected' : '' }}>Alianzas
                                     (Transversal)</option>

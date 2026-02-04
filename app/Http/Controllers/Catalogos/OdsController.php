@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Catalogos;
 
 use Illuminate\Http\Request;
 
-use Illuminate\Routing\Controller;
-use App\Models\Catalogos\Ods;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Routing\Controller;
+use App\Models\Catalogos\Ods;
+use App\Models\Catalogos\MetaNacional;
+
 
 class OdsController extends Controller
 {
@@ -29,8 +31,9 @@ class OdsController extends Controller
             'destroy'
         ]);
     }
-    //Metodo index
-
+    /**
+     * Metodo index
+     */
     public function index(Request $request)
     {
         $busqueda = $request->input('busqueda');
@@ -50,8 +53,43 @@ class OdsController extends Controller
         return view('dashboard.configuracion.ods.index', compact('ods'));
     }
     /**
+     * Metodo show
+     */
+    public function show($id)
+    {
+        //Obtenemos el ods con las relaciones
+        $ods = Ods::with(['metasNacionales.indicadoresNacionales.proyectos'])
+            ->findOrFail($id);
+
+        $totalMetas = $ods->metasNacionales->count();
+        $totalIndicadores = $ods->metasNacionales->pluck('indicadoresNacionales')->flatten()->count();
+        $totalProyectos = $ods->metasNacionales->pluck('indicadoresNacionales')->flatten()->pluck('proyectos')->flatten()->count();
+
+
+        return view('dashboard.configuracion.ods.show', compact('ods', 'totalMetas', 'totalIndicadores', 'totalProyectos'));
+    }
+    /**
      * Funcion para nuevo ods
      */
+
+    /**
+     * Reporte alineacion
+     */
+    public function reporteAlineacion()
+    {
+        // Traemos los ODS que TIENEN metas vinculadas (has 'metasNacionales')
+        // para no llenar el reporte de ODS vacíos.
+        $odsConMetas = Ods::with('metasNacionales')
+            ->has('metasNacionales')
+            ->orderBy('id_ods', 'asc')
+            ->get();
+
+        // También traemos las Metas "Huérfanas" (sin ODS) para detectar errores
+        $metasHuerfanas = MetaNacional::doesntHave('ods')->get();
+
+        return view('dashboard.configuracion.ods.reporte', compact('odsConMetas', 'metasHuerfanas'));
+    }
+
     public function create()
     {
         return view('dashboard.configuracion.ods.crear');
@@ -101,9 +139,11 @@ class OdsController extends Controller
     public function edit($id)
     {
         $ods_item = Ods::findOrFail($id);
-        return view('dashboard.configuracion.ods.editar', compact('ods_item'));
+        return view('dashboard.configuracion.ods.edit', compact('ods_item'));
     }
-
+    /**
+     * Metodo update
+     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -127,6 +167,9 @@ class OdsController extends Controller
                 ->with('error', 'No se pudo guardar el ODS. Detalles: ' . $e->getMessage());
         }
     }
+    /**
+     * Metodo destroy
+     */
     public function destroy($ods)
     {
         DB::beginTransaction();

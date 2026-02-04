@@ -16,10 +16,11 @@ class UnidadEjecutora extends Model
 
 
     protected $fillable = [
-        'id_organizacion',
+        'organizacion_id',
         'nombre_unidad',
-        'codigo_interno',
-        'activo'
+        'codigo_unidad',
+        'nombre_responsable',
+        'estado'
     ];
 
 

@@ -5,8 +5,9 @@ namespace App\Http\Controllers\Catalogos;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Carbon;
 use Illuminate\Routing\Controller;
-use App\Models\Catalogos\Indicador;
+use App\Models\Catalogos\IndicadorNacional;
 use App\Models\Catalogos\MetaNacional;
 
 use Illuminate\Http\Request;
@@ -36,7 +37,7 @@ class IndicadorController extends Controller
         $buscar = $request->input('busqueda');
 
         //  Iniciamos la consulta con la relación meta
-        $query = Indicador::with('meta', 'ultimoAvance');
+        $query = IndicadorNacional::with('metaNacional', 'ultimoAvance');
 
         // Aplicamos filtros de búsqueda AJAX compatible
         if ($buscar) {
@@ -92,7 +93,7 @@ class IndicadorController extends Controller
         DB::beginTransaction();
         try {
 
-            Indicador::create($request->all());
+            IndicadorNacional::create($request->all());
             DB::commit();
             return redirect()
                 ->route('catalogos.indicadores.index')
@@ -116,7 +117,7 @@ class IndicadorController extends Controller
         try {
 
 
-            $indicador = Indicador::findOrFail($id);
+            $indicador = IndicadorNacional::findOrFail($id);
             $indicador->update($request->all());
             DB::commit();
             return redirect()->route('catalogos.indicadores.index')
@@ -129,30 +130,83 @@ class IndicadorController extends Controller
     }
 
     //Metodo show para
+
     public function show($id)
     {
-        // Buscamos el indicador con sus relaciones
-        $indicador = Indicador::with(['meta', 'avances' => function ($query) {
-            $query->orderBy('fecha_reporte', 'asc');
+
+        $indicador = IndicadorNacional::with(['proyectos' => function ($q) {
+            $q->withPivot('contribucion_proyecto');
+            $q->with(['marcoLogico' => function ($qAct) {
+                $qAct->whereIn('nivel', ['ACTIVIDAD', 'Actividad']);
+                $qAct->with('historialAvances');
+            }]);
         }])->findOrFail($id);
 
-        // Extraemos solo las fechas y los valores en listas separadas
-        $fechasGrafico = $indicador->avances->map(function ($avance) {
-            return date('d/m/Y', strtotime($avance->fecha_reporte));
-        });
+        // CONFIGURACIÓN DEL GRÁFICO
+        $labels = [];
+        $dataHistorica = [];
 
-        $valoresGrafico = $indicador->avances->pluck('valor_logrado');
+        // Recorremos los últimos 6 meses
+        for ($i = 5; $i >= 0; $i--) {
+            $fechaCorte = Carbon::now()->subMonths($i)->endOfMonth();
+            $labels[] = $fechaCorte->format('M Y');
 
-        // Agregamos la Línea Base al inicio del gráfico para que se vea el punto de partida
-        $fechasGrafico->prepend('Línea Base (' . $indicador->anio_linea_base . ')');
-        $valoresGrafico->prepend($indicador->linea_base);
+            $acumuladoIndicadorMes = 0;
 
-        return view('dashboard.configuracion.indicadores.show', compact('indicador', 'fechasGrafico', 'valoresGrafico'));
+            // Recorremos Proyectos del Indicador
+            foreach ($indicador->proyectos as $proyecto) {
+                // Reconstruimos el valor del proyecto sumando sus actividades en el pasado
+
+                $avanceProyectoEnFecha = 0;
+                $actividades = $proyecto->marcoLogico;
+
+                if ($actividades->isNotEmpty()) {
+                    $sumaPonderadaActividades = 0;
+                    $totalPesoActividades = $actividades->sum('ponderacion');
+
+                    foreach ($actividades as $actividad) {
+                        // Buscamos el último reporte de ESTA actividad antes de la fecha corte
+                        $ultimoHistorial = $actividad->historialAvances
+                            ->where('fecha_reporte', '<=', $fechaCorte)
+                            ->sortByDesc('fecha_reporte')
+                            ->first();
+
+                        // Si hubo reporte, usamos ese valor. Si no, 0.
+                        $valActividad = $ultimoHistorial ? $ultimoHistorial->avance_total_acumulado : 0;
+
+                        // Suma ponderada (Valor * PesoActividad)
+                        $sumaPonderadaActividades += ($valActividad * $actividad->ponderacion);
+                    }
+
+                    // Calculamos el promedio ponderado del proyecto en ese mes
+                    if ($totalPesoActividades > 0) {
+                        $avanceProyectoEnFecha = $sumaPonderadaActividades / $totalPesoActividades;
+                    }
+                }
+                //  Aporte al Indicador
+                $pesoProyecto = $proyecto->pivot->contribucion_proyecto;
+
+                //  (AvanceProyectoReconstruido * PesoProyecto) / 100
+                $acumuladoIndicadorMes += ($avanceProyectoEnFecha * $pesoProyecto) / 100;
+            }
+
+            $dataHistorica[] = round($acumuladoIndicadorMes, 2);
+        }
+        //
+        // Puedba de
+        $chartLabels = json_encode($labels);
+        $chartData = json_encode($dataHistorica);
+        $proyectos = $indicador->proyectos()
+            ->withPivot('contribucion_proyecto')
+            ->orderBy('id', 'desc')
+            ->paginate(10);
+        return view('dashboard.configuracion.indicadores.show', compact('indicador', 'chartLabels', 'chartData', 'proyectos'));
     }
+    //Metodo destroy
     public function destroy($id)
     {
         try {
-            $indicador = Indicador::findOrFail($id);
+            $indicador = IndicadorNacional::findOrFail($id);
             $indicador->delete();
 
             return redirect()->back()->with('success', 'El indicador ha sido eliminado correctamente.');
@@ -166,7 +220,7 @@ class IndicadorController extends Controller
     public function generarPdf($id)
     {
         // Buscamos los datos (igual que en el Kardex)
-        $indicador = Indicador::with(['meta', 'avances' => function ($query) {
+        $indicador = IndicadorNacional::with(['metaNacional', 'avances' => function ($query) {
             $query->orderBy('fecha_reporte', 'asc');
         }])->findOrFail($id);
 

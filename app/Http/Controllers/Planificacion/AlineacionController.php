@@ -34,12 +34,14 @@ class AlineacionController extends Controller
         $busqueda = $request->input('busqueda');
 
         // Consulta de Alineaciones (Filtrada por la organización del usuario)
-        $query = AlineacionEstrategica::where('organizacion_id', $organizacionId)
-            ->with([
-                'objetivoEstrategico',
-                'metaNacional.ods',
-                'usuario',
-            ]);
+        $query = AlineacionEstrategica::with([
+            'objetivoEstrategico',
+            'metaNacional.ods',
+            'usuario',
+        ])
+            ->whereHas('objetivoEstrategico', function ($q) use ($organizacionId) {
+                $q->where('organizacion_id', $organizacionId);
+            });
 
         // Aplicar filtros de búsqueda
         if ($busqueda) {

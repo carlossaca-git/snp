@@ -26,6 +26,6 @@ use Auditable;
     // Un Plan tiene muchos Objetivos Estratégicos
     public function objetivosEstrategicos()
     {
-        return $this->hasMany(ObjetivoEstrategico::class, 'id_plan', 'id_plan');
+        return $this->hasMany(ObjetivoEstrategico::class, 'plan_id', 'id_plan');
     }
 }

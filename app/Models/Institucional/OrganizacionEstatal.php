@@ -10,9 +10,10 @@ use App\Models\Planificacion\AlineacionEstrategica;
 use App\Models\Planificacion\ObjetivoEstrategico;
 
 use App\Models\Inversion\ProyectoInversion;
-use App\Models\Planificacion\Programa;
+use App\Models\Inversion\Programa;
+use App\Models\Inversion\PlanInversion;
 
-// Importamos los modelos de los catálogos para las relaciones
+
 use App\Models\Institucional\TipoOrganizacion;
 use App\Models\Catalogos\Subsector;
 use App\Traits\Auditable;
@@ -87,7 +88,8 @@ class OrganizacionEstatal extends Model
     }
 
     // Alineacion estrategica
-    public function alineaciones()    {
+    public function alineaciones()
+    {
 
         return $this->hasMany(AlineacionEstrategica::class, 'organizacion_id', 'id_organizacion');
     }
@@ -101,13 +103,21 @@ class OrganizacionEstatal extends Model
     {
         return $this->hasMany(Programa::class, 'id_organizacion');
     }
-    //
+    //  Relacion: una organizacion puede tener muchas unidades ejecutoras
     public function unidadesEjecutoras()
     {
         return $this->hasMany(UnidadEjecutora::class, 'id_organizacion', 'id_organizacion');
     }
-
-
+    // Relacion: una organizacion puede tener muchos planes de inversion
+    public function planesInversion()
+    {
+        return $this->hasMany(
+            PlanInversion::class,
+            'organizacion_id',
+            'id_organizacion'
+        );
+    }
+    // Eventos del modelo
     protected static function boot()
     {
         parent::boot();

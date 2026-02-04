@@ -53,14 +53,13 @@
                             @forelse($pnd as $item)
                                 <tr>
                                     <td class="px-4">
-                                        <span class="badge bg-dark px-3 py-2 shadow-sm">
+                                        <span class="badge bg-secondary px-3 py-2 shadow-sm">
                                             {{ $item->codigo_objetivo }}
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-dark">{{ Str::limit($item->descripcion_objetivo, 100) }}
+                                        <div class="fw-bold text-muted">{{ Str::limit($item->descripcion_objetivo, 100) }}
                                         </div>
-                                        {{-- <small class="text-muted">ID: {{ $item->id_objetivo_nacional }}</small> --}}
                                     </td>
                                     <td>
                                         <div class="small"><span class="badge bg-info text-dark">
@@ -72,8 +71,8 @@
                                             </span>
                                         </div>
                                         <div class="small text-muted">
-                                            <i class="far fa-calendar-alt"></i> Vigencia: {{ $item->periodo_inicio }} -
-                                            {{ $item->periodo_fin }}
+                                            <i class="far fa-calendar-alt"></i> Vigencia: {{ $item->eje?->plan?->periodo_inicio }} -
+                                            {{ $item->eje?->plan?->periodo_fin }}
                                         </div>
                                     </td>
 
@@ -86,7 +85,6 @@
                                     </td>
                                     <td class="text-end px-4">
                                         {{-- ACCIONES --}}
-
                                         @if (Auth::user()->tienePermiso('objetivos.gestionar'))
                                             <div class="btn-group shadow-sm">
                                                 <button type="button"
@@ -134,11 +132,11 @@
     </div>
 
     {{-- MODAL PARA EDICIÓN DE PND --}}
-    @include('dashboard.configuracion.pnd.editar')
+    @include('dashboard.configuracion.objetivos.editar')
     {{-- MODAL PARA CREAR NUEVO OBJETIVO --}}
-    @include('dashboard.configuracion.pnd.crear')
+    @include('dashboard.configuracion.objetivos.crear')
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> --}}
     @push('scripts')
         <script>
             document.addEventListener('click', function(event) {
@@ -167,8 +165,8 @@
                     if (selectEje) {
                         selectEje.value = ejeId;
                     }
-                    // 2. Referencias e Inyección
-                    document.getElementById('formEditPnd').action = "/configuracion/pnd/" + id;
+                    // Asignar datos al formulario del modal
+                    document.getElementById('formEditPnd').action = "/catalogos/objetivos/" + id;
                     document.getElementById('edit_pnd_codigo').value = codigo;
                     document.getElementById('edit_pnd_descripcion').value = descripcion;
                     document.getElementById('edit_pnd_eje').value = eje;
@@ -186,7 +184,7 @@
                 const deleteBtn = event.target.closest('.btn-delete');
 
                 if (deleteBtn) {
-                    event.preventDefault(); // Evita el envío inmediato
+                    event.preventDefault(); // Evitar el envío inmediato del formulario
                     const form = deleteBtn.closest('.form-eliminar');
 
                     Swal.fire({
@@ -194,14 +192,14 @@
                         text: "El objetivo se marcará como eliminado.",
                         icon: 'warning',
                         showCancelButton: true,
-                        confirmButtonColor: '#e74a3b', // Rojo Bootstrap
-                        cancelButtonColor: '#858796', // Gris Bootstrap
+                        confirmButtonColor: '#e74a3b',
+                        cancelButtonColor: '#858796',
                         confirmButtonText: 'Sí, eliminar',
                         cancelButtonText: 'Cancelar',
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            form.submit(); // Envía el formulario si confirmó
+                            form.submit();
                         }
                     });
                 }
@@ -238,8 +236,6 @@
 
                 // Ejecutar cada vez que el usuario escribe
                 inputBusqueda.addEventListener('input', toggleLimpiarButton);
-
-                // Acción al hacer clic en la "X"
                 btnLimpiar.addEventListener('click', function() {
                     inputBusqueda.value = '';
                     toggleLimpiarButton();

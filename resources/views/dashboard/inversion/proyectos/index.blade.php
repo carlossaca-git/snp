@@ -90,10 +90,10 @@
                                 </td>
                                 {{-- ALINEACION --}}
                                 <td>
-                                    @if ($p->objetivo)
-                                        <span class="badge  text-dark" title="{{ $p->objetivo->codigo }}">
+                                    @if ($p->objetivoEstrategico)
+                                        <span class="badge  text-dark" title="{{ $p->objetivoEstrategico->codigo }}">
                                             <span data-feather="target" style="width: 12px"></span> Obj.
-                                            {{ $p->objetivo->codigo }}
+                                            {{ $p->objetivoEstrategico->codigo }}
                                         </span>
                                     @else
                                         <span class="badge bg-warning text-dark">No alineado</span>
@@ -150,11 +150,11 @@
                                     <div class="btn-group shadow-sm">
                                         <a href="{{ route('inversion.proyectos.show', $p->id) }}"
                                             class="btn btn-sm btn-info text-white" title="Ver detalles">
-                                            <i class="" data-feather="eye"></i>
+                                            <i class="fas fa-eye" ></i>
                                         </a>
                                         <a href="{{ route('inversion.proyectos.edit', $p->id) }}"
                                             class="btn btn-sm btn-white border" title="Editar">
-                                            <span data-feather="edit" class="text-primary"></span>
+                                            <i class="fas fa-edit" ></i>
                                         </a>
                                         <form action="{{ route('inversion.proyectos.destroy', $p->id) }}" method="POST"
                                             class="d-inline"
@@ -163,7 +163,7 @@
                                             @csrf
                                             @method('DELETE') <button type="submit"
                                                 class="btn btn-sm btn-white border text-danger" title="Eliminar Proyecto">
-                                                <i class="fas fa-trash fs-5" data-feather="trash-2"></i>
+                                                <i class="fas fa-trash"></i>
                                             </button>
 
                                         </form>

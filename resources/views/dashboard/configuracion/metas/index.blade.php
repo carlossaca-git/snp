@@ -9,7 +9,7 @@
             @if (Auth::user()->tienePermiso('metas_pnd.gestionar'))
                 <button type="button" class="btn btn-secondary btn-sm d-inline-flex align-items-center" data-bs-toggle="modal"
                     data-bs-target="#modalCrearMeta">
-                    <i class="fas fa-bullseye fa-sm text-white-50 me-1" data-feather="plus"></i> Nueva Meta
+                    <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Nueva Meta
                 </button>
             @endif
         </div>
@@ -80,60 +80,74 @@
                                             {{ $item->estado == 1 ? 'Activo' : 'Inactivo' }}
                                         </span>
                                     </td>
-                                    <td>
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span class="text-xs font-weight-bold text-muted">
-                                            {{ $item->proyectos_calculados->count() }} Proyectos
-                                        </span>
-                                        <span
-                                            class="small font-weight-bold {{ $item->avance_promedio < 50 ? 'text-danger' : 'text-success' }}">
-                                            {{ number_format($item->avance_promedio, 1) }}%
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar
-                                        {{-- Logica de Colores --}}
-                                        @if ($item->avance_promedio < 40) bg-danger
-                                        @elseif($item->avance_promedio < 80) bg-warning
-                                        @else bg-success @endif"
-                                            role="progressbar" style="width: {{ $item->avance_promedio }}%"
-                                            aria-valuenow="{{ $item->avance_promedio }}" aria-valuemin="0"
-                                            aria-valuemax="100">
+                                    <td class="align-middle">
+                                        @php
+                                            // Obtenemos el dato calculado del Modelo (Ponderado)
+                                            $avance = $item->avance_actual;
+
+                                            // Definimos el color según el semáforo
+                                            $claseColor = 'bg-danger';
+                                            if ($avance >= 40) {
+                                                $claseColor = 'bg-warning';
+                                            } // Amarillo
+                                            if ($avance >= 80) {
+                                                $claseColor = 'bg-primary';
+                                            } // Azul/Bueno
+                                            if ($avance >= 100) {
+                                                $claseColor = 'bg-success';
+                                            } // Verde/Excelente
+                                        @endphp
+
+                                        {{-- CONTEO--}}
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-xs font-weight-bold text-primary"
+                                                title="Cantidad de Indicadores asociados">
+                                                <i class="fas fa-chart-pie me-1"></i>
+                                                {{ $item->indicadoresNacionales->count() }} Indicadores
+                                            </span>
+                                            <span class="small font-weight-bold text-dark">
+                                                {{ number_format($avance, 1) }}%
+                                            </span>
                                         </div>
-                                    </div>
-                                    @if ($item->proyectos_calculados->isEmpty())
-                                        <div class="text-xs text-gray-300 fst-italic mt-1">Sin ejecución registrada</div>
-                                    @endif
-                                    {{-- Contenedor de ODS vinculados --}}
-                                    <div class="d-flex flex-wrap gap-1 mt-2">
-                                        @if ($item->ods->count() > 0)
-                                            @foreach ($item->ods as $ods_vinculado)
-                                                <span
-                                                    class="badge d-flex align-items-center justify-content-center shadow-sm"
-                                                    style="background-color: {{ $ods_vinculado->color_hex }};
-                                                    width: 40px;
-                                                    height: 24px;
-                                                    font-size: 0.65rem;
-                                                    color: white;
-                                                    border-radius: 4px;"
-                                                    title="{{ $ods_vinculado->nombre }}">
-                                                    {{ $ods_vinculado->codigo }}
-                                                </span>
-                                            @endforeach
-                                        @else
-                                            <small class="text-muted" style="font-size: 0.6rem; font-style: italic;">
-                                                Sin ODS vinculados
-                                            </small>
+
+                                        {{-- PROGRESO --}}
+                                        <div class="progress shadow-sm" style="height: 8px; background-color: #e9ecef;">
+                                            <div class="progress-bar {{ $claseColor }}" role="progressbar"
+                                                style="width: {{ $avance }}%" aria-valuenow="{{ $avance }}"
+                                                aria-valuemin="0" aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        @if ($item->indicadoresNacionales->isEmpty())
+                                            <div class="text-xs text-muted fst-italic mt-1">
+                                                Sin indicadores
+                                            </div>
                                         @endif
-                                    </div>
+                                        {{-- SECCIÓN ODS--}}
+                                        <div class="d-flex flex-wrap gap-1 mt-2">
+                                            @if ($item->ods->count() > 0)
+                                                @foreach ($item->ods as $ods_vinculado)
+                                                    <span
+                                                        class="badge d-flex align-items-center justify-content-center shadow-sm"
+                                                        style="background-color: {{ $ods_vinculado->color_hex }};
+                                                        width: 40px;
+                                                        height: 24px;
+                                                        font-size: 0.65rem;
+                                                        color: white;
+                                                        border-radius: 4px;"
+                                                        title="{{ $ods_vinculado->nombre }}">
+                                                        {{ $ods_vinculado->codigo }}
+                                                    </span>
+                                                @endforeach
+                                            @else
+                                                <small class="text-muted" style="font-size: 0.6rem; font-style: italic;">
+                                                    Sin ODS vinculados
+                                                </small>
+                                            @endif
+                                        </div>
                                     </td>
                                     {{-- ACCIONES: ELIIMINAR - EDITAR- DCUMENTO- VALOR ACTUAL --}}
                                     <td class="text-end px-4">
                                         <div class="btn-group shadow-sm">
-                                            <a href="{{ route('catalogos.metas.show', $item) }}"
-                                                class="btn btn-sm btn-outline-primary" title="Ver desglose de proyectos">
-                                                <i class="fas fa-project-diagram"></i> Proyectos
-                                            </a>
                                             {{-- BOTON ABRIR VINCULACION METAS-ODS --}}
                                             <button type="button" class="btn btn-sm btn-outline-primary"
                                                 onclick="abrirVinculacionOds(this)" data-id="{{ $item->id_meta_nacional }}"
@@ -141,6 +155,10 @@
                                                 data-nombre="{{ $item->nombre_meta }}">
                                                 <i class="fas fa-globe"></i> ODS
                                             </button>
+                                            <a href="{{ route('catalogos.metas.show', $item) }}"
+                                                class="btn btn-sm btn-outline-primary" title="Ver ficha">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
                                             @if (Auth::user()->tienePermiso('metas_pnd.gestionar'))
                                                 {{-- BOTON MOSTRAR DOCUMENTO DE RESPALDO --}}
                                                 @if ($item->url_documento)
@@ -214,7 +232,7 @@
     {{-- MODAL EDITAR --}}
     @include('dashboard.configuracion.metas.editar')
     {{-- MODAL ACTUALIZAR VALOR Y VINCULAR ODS --}}
-    @include('dashboard.configuracion.metas.partials.modals')
+    @include('dashboard.configuracion.metas.partials.ods')
 @endsection
 @push('scripts')
     <script>
@@ -223,17 +241,6 @@
             urlIndex: "{{ route('catalogos.metas.index') }}",
             msgSuccess: "{{ session('success') }}" // Pasamos el mensaje de sesión
         };
-
-        // Mostrar alerta de éxito si existe
-        if (CONFIG_METAS.msgSuccess) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Logrado!',
-                text: CONFIG_METAS.msgSuccess,
-                timer: 3000,
-                showConfirmButton: false
-            });
-        }
     </script>
 
     <script src="{{ asset('js/metas/metas-logic.js') }}"></script>

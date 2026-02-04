@@ -10,10 +10,8 @@
         </div>
     </x-layouts.header_content>
 
-    @include('partials.mensajes')
-
     <div class="container-fluid py-3">
-        {{-- Buscador --}}
+        @include('partials.mensajes')
         <div class="row justify-content-end mb-3">
             <div class="col-md-5">
                 <form action="{{ route('estrategico.objetivos.index') }}" method="GET">
@@ -45,8 +43,8 @@
                                 <th class="ps-4 text-uppercase text-secondary small fw-bold" width="10%">Código</th>
                                 <th class="text-uppercase text-secondary small fw-bold" width="35%">Objetivo
                                     Institucional</th>
-                                <th class="text-uppercase text-secondary small fw-bold" width="35%">Alineación Nacional
-                                    (PND)</th>
+                                <th class="text-uppercase text-secondary small fw-bold" width="10%">Tipo</th>
+                                <th class="text-uppercase text-secondary small fw-bold" width="35%">Proyectos</th>
                                 <th class="text-center text-uppercase text-secondary small fw-bold" width="10%">Vigencia
                                 </th>
                                 <th class="text-end pe-4 text-uppercase text-secondary small fw-bold" width="10%">
@@ -54,7 +52,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse ($objetivos as $obj)
+                            @forelse ($objetivoEstr as $obj)
                                 <tr>
                                     {{--  Código --}}
                                     <td class="ps-4">
@@ -73,29 +71,58 @@
                                             {{ Str::limit($obj->descripcion, 120) }}
                                         </div>
                                     </td>
-
-                                    {{-- Alineación (Mejorada visualmente) --}}
                                     <td>
-                                        @forelse ($obj->metasNacionales ?? [] as $meta)
-                                            <div class="d-flex align-items-start mb-2 p-2 rounded">
-                                                <div class="me-2 mt-1">
-                                                    <i class="fas fa-flag text-success"></i>
-                                                </div>
-                                                <div>
-                                                    <span class="badge bg-success bg-opacity-75 mb-1"
-                                                        style="font-size: 0.7rem;">
-                                                        META {{ $meta->codigo_meta ?? 'S/C' }}
-                                                    </span>
-                                                    <div class="text-muted lh-sm" style="font-size: 0.8rem;">
-                                                        {{ Str::limit($meta->descripcion_meta, 90) }}
-                                                    </div>
+                                        <div class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">
+                                            {{ Str::limit($obj->tipo_objetivo, 120) }}
+                                        </div>
+                                    </td>
+
+                                    {{-- Poryectos --}}
+                                    <td>
+                                        @if ($obj->proyectos->isNotEmpty())
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+
+                                                <span class="badge bg-primary rounded-pill cursor-pointer"
+                                                    data-bs-toggle="tooltip" data-bs-html="true"
+                                                    title="<div class='text-start'><strong>Proyectos:</strong><br>
+                                                    @foreach ($obj->proyectos as $p)
+                                                    &bull; {{ Str::limit($p->nombre_proyecto, 50) }}
+                                                    <br>
+                                                    @endforeach
+                                                    </div>">
+                                                    <i class="fas fa-folder me-1"></i>
+                                                    {{ $obj->proyectos->count() }}
+                                                </span>
+
+                                                {{-- Monto --}}
+                                                <small class="fw-bold text-success">
+                                                    <i class="fas fa-dollar-sign"></i>
+                                                    {{ number_format($obj->total_inversion, 2) }}
+                                                </small>
+                                            </div>
+
+                                            {{-- PROGRESO  --}}
+                                            <div class="progress" style="height: 6px; border-radius: 3px;">
+                                                <div class="progress-bar
+                                                    {{ $obj->avance_promedio < 40 ? 'bg-danger' : ($obj->avance_promedio < 80 ? 'bg-warning' : 'bg-success') }}"
+                                                    role="progressbar" style="width: {{ $obj->avance_promedio }}%;"
+                                                    aria-valuenow="{{ $obj->avance_promedio }}" aria-valuemin="0"
+                                                    aria-valuemax="100">
                                                 </div>
                                             </div>
-                                        @empty
-                                            <span class="badge bg-secondary fw-normal">
-                                                <i class="fas fa-unlink me-1"></i> Sin Alineación
+
+                                            {{-- porcentaje --}}
+                                            <div class="d-flex justify-content-end mt-1">
+                                                <span class="extra-small text-muted fw-bold" style="font-size: 0.75rem;">
+                                                    {{ number_format($obj->avance_promedio, 2) }}% Avance
+                                                </span>
+                                            </div>
+                                        @else
+                                            {{-- ESTADO VACÍO --}}
+                                            <span class="badge bg-light text-muted border">
+                                                <i class="fas fa-folder-open me-1"></i> Sin Proyectos
                                             </span>
-                                        @endforelse
+                                        @endif
                                     </td>
 
                                     {{-- Vigencia --}}
@@ -109,7 +136,7 @@
                                         </div>
                                     </td>
 
-                                    {{-- Acciones (Fusionadas y Limpias) --}}
+                                    {{-- Acciones --}}
                                     <td class="text-end pe-4">
                                         <div class="btn-group" role="group">
                                             <a href="{{ route('estrategico.objetivos.show', $obj->id_objetivo_estrategico) }}"
@@ -119,17 +146,16 @@
                                             {{-- Editar --}}
                                             <a href="{{ route('estrategico.objetivos.edit', $obj) }}"
                                                 class="btn btn-sm btn-light border text-warning" title="Editar">
-                                                <i class="fas fa-pencil-alt"></i> {{-- Corregí data-feather por fontawesome para consistencia --}}
+                                                <i class="fas fa-pencil-alt"></i>
                                             </a>
 
                                             {{-- Eliminar --}}
                                             <form
                                                 action="{{ route('estrategico.objetivos.destroy', $obj->id_objetivo_estrategico) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('¿Está seguro de eliminar este objetivo? Se perderán las alineaciones asociadas.');">
-                                                @csrf @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-light border text-danger"
-                                                    title="Eliminar">
+                                                method="POST" class="d-inline form-eliminar">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-danger">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
                                             </form>
@@ -156,13 +182,13 @@
                 {{-- Paginación --}}
                 <div class="px-4 py-3 border-top bg-light d-flex justify-content-between align-items-center">
                     <div class="small text-muted">
-                        @if ($objetivos->total() > 0)
-                            Mostrando {{ $objetivos->firstItem() }} - {{ $objetivos->lastItem() }} de
-                            {{ $objetivos->total() }}
+                        @if ($objetivoEstr->total() > 0)
+                            Mostrando {{ $objetivoEstr->firstItem() }} - {{ $objetivoEstr->lastItem() }} de
+                            {{ $objetivoEstr->total() }}
                         @endif
                     </div>
                     <div>
-                        {{ $objetivos->appends(request()->query())->links() }} {{-- Paginación simple de Bootstrap --}}
+                        {{ $objetivoEstr->appends(request()->query())->links() }}
                     </div>
                 </div>
 
@@ -197,6 +223,37 @@
 
                 inputBusqueda.closest('form').submit();
             });
+
+            const formularios = document.querySelectorAll('.form-eliminar');
+
+            formularios.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    //  DETENER el envío automático
+                    e.preventDefault();
+
+                    //  Mostrar la alerta
+                    Swal.fire({
+                        title: '!Cuidado!',
+                        text: "¡Este Objetivo se moverá a la papelera!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminarlo',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            this.submit();
+                        }
+                    });
+                });
+            });
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
         });
     </script>
 @endpush

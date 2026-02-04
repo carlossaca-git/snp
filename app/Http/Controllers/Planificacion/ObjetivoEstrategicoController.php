@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Planificacion;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Planificacion\ObjetivoEstrategico;
 use App\Models\Catalogos\ObjetivoNacional;
-use App\Models\Catalogos\MetaNacional;
-use App\Models\Planificacion\AlineacionEstrategica;
 use App\Models\Planificacion\PlanInstitucional;
 
 class ObjetivoEstrategicoController extends Controller
@@ -25,7 +24,7 @@ class ObjetivoEstrategicoController extends Controller
         $idOrganizacion = Auth::user()->id_organizacion;
         $busqueda = $request->input('busqueda');
         //  Construcción de la Consulta Base
-        $query = ObjetivoEstrategico::where('id_organizacion', $idOrganizacion)
+        $query = ObjetivoEstrategico::where('organizacion_id', $idOrganizacion)
             ->with([
                 'metasNacionales.objetivoNacional',
                 'proyectos.marcoLogico'
@@ -42,27 +41,27 @@ class ObjetivoEstrategicoController extends Controller
         }
 
         //  Ordenamiento y Paginación
-        $objetivos = $query->orderBy('codigo', 'desc')
+        $objetivoEstr = $query->orderBy('codigo', 'desc')
             ->paginate(10)
             ->appends(['busqueda' => $busqueda]);
         // INYECCIÓN DE CÁLCULOS
-        $objetivos->getCollection()->transform(function ($objetivo) {
-            $proyectos = $objetivo->proyectos ?? collect();
+        $objetivoEstr->getCollection()->transform(function ($objetivosEstr) {
+            $proyectos = $objetivosEstr->proyectos ?? collect();
 
             if ($proyectos->isNotEmpty()) {
-                $objetivo->avance_promedio = $proyectos->avg(function ($proy) {
+                $objetivosEstr->avance_promedio = $proyectos->avg(function ($proy) {
                     return $proy->avance_real;
                 });
-                $objetivo->total_inversion = $proyectos->sum('monto_total_inversion');
+                $objetivosEstr->total_inversion = $proyectos->sum('monto_total_inversion');
             } else {
-                $objetivo->avance_promedio = 0;
-                $objetivo->total_inversion = 0;
+                $objetivosEstr->avance_promedio = 0;
+                $objetivosEstr->total_inversion = 0;
             }
 
-            return $objetivo;
+            return $objetivosEstr;
         });
 
-        return view('dashboard.estrategico.objestra.index', compact('objetivos', 'idOrganizacion'));
+        return view('dashboard.estrategico.objestra.index', compact('objetivoEstr', 'idOrganizacion'));
     }
 
     /**
@@ -71,6 +70,8 @@ class ObjetivoEstrategicoController extends Controller
     public function create()
     {   //Obtener la organización del usuario
         $idOrganizacion = Auth::user()->id_organizacion;
+
+        $alineacionPND = ObjetivoNacional::with('metasNacionales')->get();
         // Necesitamos la lista del PND para el Select
         $objetivosNacionales = ObjetivoNacional::where('estado', 1)->get();
         $objetivosEst = new ObjetivoEstrategico();
@@ -81,30 +82,35 @@ class ObjetivoEstrategicoController extends Controller
             return redirect()->route('estrategico.planificacion.planes.index')
                 ->with('error', 'Debe crear un Plan Institucional VIGENTE antes de registrar objetivos.');
         }
-        return view('dashboard.estrategico.objestra.crear', compact('objetivosNacionales', 'objetivosEst', 'planVigente'));
+        return view('dashboard.estrategico.objestra.create', compact(
+            'objetivosNacionales',
+            'objetivosEst',
+            'planVigente',
+            'alineacionPND'
+        ));
     }
     /**
      * Metodo edit
      */
     public function edit($id)
     {
-        $objetivo = ObjetivoEstrategico::with('metasNacionales.objetivoNacional')->findOrFail($id);
-        if ($objetivo->id_organizacion != Auth::user()->id_organizacion) {
+        $alineacionPND = ObjetivoNacional::with('metasNacionales')->get();
+        $objetivoEstr = ObjetivoEstrategico::with('metasNacionales.objetivoNacional')->findOrFail($id);
+        if ($objetivoEstr->organizacion_id != Auth::user()->id_organizacion) {
             // Si el ID de la org del objetivo no coincide con el del usuario impedimos el acceso
             abort(403, 'Acceso No Autorizado');
         }
         //Lista para llenar el select filtro
         $objetivosNacionales = ObjetivoNacional::where('estado', 1)->get();
         //Buscamos la primera meta vinculada
-        $metaVinculada = $objetivo->metasNacionales->first();
-        //Obtenemos ;as vinculaciones pero usamos null safe por si no hay vinculacion todabia
-        $alineacionActual = $metaVinculada?->objetivoNacional->first()->id_objetivo_nacional ?? null;
-        //Obtenemos el Id del objetivo
-        return view('dashboard.estrategico.objestra.editar', compact(
-            'objetivo',
+        $metaVinculada = $objetivoEstr->metasNacionales->first();
+        $metasSeleccionadas = $objetivoEstr->metasNacionales->pluck('id_meta_nacional')->toArray();
+        return view('dashboard.estrategico.objestra.edit', compact(
+            'objetivoEstr',
             'objetivosNacionales',
-            'alineacionActual',
-            'metaVinculada'
+            'metaVinculada',
+            'alineacionPND',
+            'metasSeleccionadas'
         ));
     }
 
@@ -133,81 +139,90 @@ class ObjetivoEstrategicoController extends Controller
         return view('dashboard.estrategico.objestra.show', compact('objetivo', 'proyectos', 'promedioAvance', 'totalInversion'));
     }
     public function store(Request $request)
-{
-    //  Validaciones
-    $request->validate([
-        'id_meta_nacional'      => 'required|exists:cat_meta_nacional,id_meta_nacional',
-        'codigo'                => 'required|unique:cat_objetivo_estrategico,codigo|max:20',
-        'nombre'                => 'required|string|max:500',
-        'descripcion'           => 'nullable|string',
-        'tipo_objetivo'         => 'required|in:Estrategico,Tactico',
-        'unidad_responsable_id' => 'required|string',
-        'fecha_inicio'          => 'required|date',
-        'fecha_fin'             => 'required|date|after_or_equal:fecha_inicio',
-        'indicador'             => 'nullable|string|max:255',
-        'linea_base'            => 'nullable|numeric',
-        'meta'                  => 'nullable|numeric',
-    ]);
-
-    //  INICIAR TRANSACCIÓN
-    DB::beginTransaction();
-
-    try {
-        $idOrganizacion = Auth::user()->id_organizacion;
-
-        if (!$idOrganizacion) {
-            throw new \Exception('El usuario no está vinculado a ninguna organización.');
-        }
-
-        // Obtener el Plan Vigente (Vital para la vinculación)
-        $planVigente = PlanInstitucional::where('id_organizacion', $idOrganizacion)
-                        ->where('estado', 'VIGENTE')
-                        ->first();
-
-        // Validamos manualmente para dar un mensaje claro si no existe
-        if (!$planVigente) {
-            throw new \Exception('No existe un Plan Institucional VIGENTE. Por favor registre uno en el módulo de Planificación antes de crear objetivos.');
-        }
-
-        // Crear el Objetivo (CORREGIDO)
-        $objetivo = ObjetivoEstrategico::create([
-            'id_organizacion'       => $idOrganizacion,
-            'id_plan'               => $planVigente->id_plan,
-            'codigo'                => $request->codigo,
-            'nombre'                => $request->nombre,
-            'descripcion'           => $request->descripcion,
-            'tipo_objetivo'         => $request->tipo_objetivo,
-            'unidad_responsable_id' => $request->unidad_responsable_id,
-            'indicador'             => $request->indicador,
-            'linea_base'            => $request->linea_base,
-            'meta'                  => $request->meta,
-            'fecha_inicio'          => $request->fecha_inicio,
-            'fecha_fin'             => $request->fecha_fin,
-            'estado'                => 1
+    {
+        $usuario = Auth::user()->id_usuario;
+        //  Validaciones
+        $request->validate([
+            'metas_id'              => 'required|array|min:1',
+            'metas_id.*'            => 'exists:cat_meta_nacional,id_meta_nacional',
+            'codigo'                => 'required|unique:cat_objetivo_estrategico,codigo|max:20',
+            'nombre'                => 'required|string|max:500',
+            'descripcion'           => 'nullable|string',
+            'tipo_objetivo'         => 'required|in:Estrategico,Tactico',
+            'unidad_responsable_id' => 'required|string',
+            'fecha_inicio'          => 'required|date',
+            'fecha_fin'             => 'required|date|after_or_equal:fecha_inicio',
+            'indicador'             => 'nullable|string|max:255',
+            'linea_base'            => 'nullable|numeric',
+            'meta'                  => 'nullable|numeric',
+            'documento_respaldo'    => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+        ], [
+            'metas_id.required' => 'Debe seleccionar al menos una Meta Nacional.',
         ]);
 
-        // Crear la Alineación (El puente con el Plan Nacional)
-        AlineacionEstrategica::create([
-            'organizacion_id'         => $idOrganizacion,
-            'objetivo_estrategico_id' => $objetivo->id_objetivo_estrategico,
-            'meta_nacional_id'        => $request->id_meta_nacional,
-            'created_at'              => now(),
-        ]);
+        //  INICIAR TRANSACCIÓN
+        DB::beginTransaction();
 
-        // Confirmar cambios
-        DB::commit();
+        try {
+            $idOrganizacion = Auth::user()->id_organizacion;
 
-        return redirect()->route('estrategico.objetivos.index')
-            ->with('success', 'El Objetivo Estratégico ha sido creado y vinculado al Plan Vigente.');
+            if (!$idOrganizacion) {
+                throw new \Exception('El usuario no está vinculado a ninguna organización.');
+            }
 
-    } catch (\Exception $e) {
-        // Revertir cambios si algo falla
-        DB::rollBack();
+            // Obtener el Plan Vigente (Vital para la vinculación)
+            $planVigente = PlanInstitucional::where('id_organizacion', $idOrganizacion)
+                ->where('estado', 'VIGENTE')
+                ->first();
 
-        return back()->withInput()
-            ->with('error', 'Error al guardar: ' . $e->getMessage());
+            // Validamos manualmente para dar un mensaje claro si no existe
+            if (!$planVigente) {
+                throw new \Exception('No existe un Plan Institucional VIGENTE. Por favor registre uno en el módulo de Planificación antes de crear objetivos.');
+            }
+            //Documentos
+            if ($request->hasFile('documento_respaldo')) {
+                $file = $request->file('documento_respaldo');
+
+                // Guardar en: storage/app/public/objetivos/respaldos
+                $path = $file->store('objetivos/respaldos', 'public');
+            }
+
+            // Crear el Objetivo
+            $objetivo = ObjetivoEstrategico::create([
+                'organizacion_id'       => $idOrganizacion,
+                'plan_id'               => $planVigente->id_plan,
+                'usuario_id'            => $usuario,
+                'codigo'                => $request->codigo,
+                'nombre'                => $request->nombre,
+                'descripcion'           => $request->descripcion,
+                'tipo_objetivo'         => $request->tipo_objetivo,
+                'unidad_responsable_id' => $request->unidad_responsable_id,
+                'indicador'             => $request->indicador,
+                'linea_base'            => $request->linea_base,
+                'meta'                  => $request->meta,
+                'fecha_inicio'          => $request->fecha_inicio,
+                'fecha_fin'             => $request->fecha_fin,
+                'url_documento'         => $path,
+                'nombre_archivo'        => $file->getClientOriginalName(),
+                'estado'                => 1
+            ]);
+
+            // Guardamos la alineacion estrategica
+            $objetivo->metasNacionales()->sync($request->metas_id);
+
+            // Confirmar cambios
+            DB::commit();
+
+            return redirect()->route('estrategico.objetivos.index')
+                ->with('success', 'El Objetivo Estratégico ha sido creado y vinculado al Plan Vigente.');
+        } catch (\Exception $e) {
+            // Revertir cambios si algo falla
+            DB::rollBack();
+
+            return back()->withInput()
+                ->with('error', 'Error al guardar: ' . $e->getMessage());
+        }
     }
-}
     /**
      * Actualiza el registro.
      */
@@ -215,6 +230,8 @@ class ObjetivoEstrategicoController extends Controller
     {
         // Validamos todo lo que viene del formulario
         $request->validate([
+            'metas_id'     => 'required|array|min:1',
+            'metas_id.*'   => 'exists:cat_meta_nacional,id_meta_nacional',
             'codigo'       => 'required|max:20|unique:cat_objetivo_estrategico,codigo,' . $id . ',id_objetivo_estrategico',
             'nombre'       => 'required|string|max:500',
             'fecha_inicio' => 'required|date',
@@ -222,32 +239,47 @@ class ObjetivoEstrategicoController extends Controller
             'indicador'    => 'nullable|string',
             'meta'         => 'nullable|string',
             'linea_base'   => 'nullable|string',
-            'id_meta_nacional' => 'required|exists:cat_meta_nacional,id_meta_nacional',
+            'documento_respaldo' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+        ], [
+            'metas_id.required' => 'Debe seleccionar al menos una Meta Nacional.',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $objetivo = ObjetivoEstrategico::findOrFail($id);
+            $objetivoEstr = ObjetivoEstrategico::findOrFail($id);
 
             // Verificar dueño
-            if ($objetivo->id_organizacion != Auth::user()->id_organizacion) {
+            if ($objetivoEstr->organizacion_id != Auth::user()->id_organizacion) {
                 abort(403, 'Acceso denegado');
             }
 
-            $objetivo->update($request->except([
+            $objetivoEstr->update($request->except([
                 '_token',
                 '_method',
-                'id_objetivo_nacional'
+                'metas_id',
+                'documento_respaldo'
             ]));
 
-            //  Actualizar la relacion
-            // Aqui tomamos ese id que sacamos arriba y lo guardamos en la tabla intermedia
-            $objetivo->metasNacionales()->sync([
-                $request->id_meta_nacional => [
-                    'organizacion_id' => Auth::user()->id_organizacion
-                ]
-            ]);
+            // Lógica del Archivo (Si agregaste el input de archivo al edit)
+            if ($request->hasFile('documento_respaldo')) {
+                // Borrar anterior si existe (Opcional, buena práctica)
+                if ($objetivoEstr->url_documento) {
+                    Storage::disk('public')->delete($objetivoEstr->url_documento);
+                }
+
+                $file = $request->file('documento_respaldo');
+                $path = $file->store('objetivos/respaldos', 'public');
+
+                $objetivoEstr->url_documento = $path;
+                $objetivoEstr->nombre_archivo = $file->getClientOriginalName();
+            }
+
+            //Guardamos el objetivo
+            $objetivoEstr->save();
+
+            // Guardamos la alineacion
+            $objetivoEstr->metasNacionales()->sync($request->metas_id);
 
             DB::commit();
             return redirect()->route('estrategico.objetivos.index')
@@ -264,12 +296,38 @@ class ObjetivoEstrategicoController extends Controller
     public function destroy($id)
     {
         try {
+            DB::beginTransaction();
+
             $objetivo = ObjetivoEstrategico::findOrFail($id);
+
+            // Verificar seguridad
+            if ($objetivo->organizacion_id != Auth::user()->id_organizacion) {
+                abort(403, 'No tienes permiso para eliminar este objetivo.');
+            }
+
+            // Verificar dependencias
+            // Si este objetivo ya tiene proyectos no se permite borrarlos
+            if ($objetivo->proyectos()->count() > 0) {
+                return back()->with('error', 'No se puede eliminar: Este objetivo tiene Proyectos asociados. Elimine los proyectos primero.');
+            }
+
+            // Limpieza de alineaciones
+            $objetivo->metasNacionales()->detach();
+
+            // LIMPIEZA DE ARCHIVOS
+            if ($objetivo->url_documento && Storage::disk('public')->exists($objetivo->url_documento)) {
+                Storage::disk('public')->delete($objetivo->url_documento);
+            }
+
+            // eliminar el objetivo
             $objetivo->delete();
 
+            DB::commit();
+
             return redirect()->route('estrategico.objetivos.index')
-                ->with('success', 'Registro eliminado correctamente.');
+                ->with('success', 'Objetivo eliminado correctamente.');
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Error al eliminar: ' . $e->getMessage());
         }
     }

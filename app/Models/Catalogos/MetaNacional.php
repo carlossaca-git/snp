@@ -6,7 +6,6 @@ use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-use App\Models\Inversion\ProyectoInversion;
 use App\Models\Planificacion\AlineacionEstrategica;
 use App\Models\Planificacion\ObjetivoEstrategico;
 
@@ -17,11 +16,10 @@ class MetaNacional extends Model
     use SoftDeletes;
     protected $table = 'cat_meta_nacional';
     protected $primaryKey = 'id_meta_nacional';
-    public $timestamps = false;
     public $incrementing = true;
 
     protected $fillable = [
-        'id_objetivo_nacional',
+        'objetivo_nacional_id',
         'codigo_meta',
         'nombre_meta',
         'descripcion_meta',
@@ -42,17 +40,17 @@ class MetaNacional extends Model
         // Asegúrate que el segundo parámetro coincida con tu columna FK en la base de datos
         return $this->belongsTo(
             ObjetivoNacional::class,
-            'id_objetivo_nacional',
+            'objetivo_nacional_id',
             'id_objetivo_nacional'
         );
     }
-
-    public function indicadores()
+    // Una meta tiene muchos indicadores
+    public function indicadoresNacionales()
     {
         return $this->hasMany(
-            Indicador::class,
-            'id_meta_pnd',
-            'id_meta_pnd'
+            IndicadorNacional::class,
+            'meta_nacional_id',
+            'id_meta_nacional'
         );
     }
     // app/Models/MetaPnd.php
@@ -95,5 +93,27 @@ class MetaNacional extends Model
             'meta_nacional_id',
             'id_meta_nacional'
         );
+    }
+
+    //Accessor: Suma de los aportes ponderados de sus indicadores
+    public function getAvanceActualAttribute()
+    {
+        $indicadores = $this->indicadoresNacionales;
+
+        if ($indicadores->isEmpty()) return 0;
+
+        $avanceMeta = 0;
+
+        foreach ($indicadores as $indicador) {
+            $avanceIndicador = $indicador->porcentaje_cumplimiento;
+
+            $pesoIndicador = $indicador->peso_oficial;
+
+            $aporte = ($avanceIndicador * $pesoIndicador) / 100;
+
+            $avanceMeta += $aporte;
+        }
+
+        return round($avanceMeta, 2);
     }
 }

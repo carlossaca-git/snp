@@ -58,14 +58,19 @@
 {{-- LOGICA DE APERTURA AUTOMÁTICA --}}
 @php
     $menuAbierto = '';
-    // Esta lógica mantiene el menú desplegado según la ruta actual
+
+    // Lógica corregida y separada
     if (request()->routeIs('administracion.auditoria.*')) {
         $menuAbierto = 'auditoria';
     } elseif (request()->routeIs('administracion.*')) {
         $menuAbierto = 'admin';
     } elseif (request()->routeIs('catalogos.*')) {
         $menuAbierto = 'normativa';
-    } elseif (request()->routeIs('estrategico.*') || request()->routeIs('institucional.*')) {
+    }
+    elseif (request()->routeIs('institucional.*') || request()->routeIs('admin.unidades.*')) {
+        $menuAbierto = 'institucion';
+    }
+    elseif (request()->routeIs('estrategico.*')) {
         $menuAbierto = 'estrategico';
     } elseif (request()->routeIs('inversion.*')) {
         $menuAbierto = 'inversion';
@@ -80,9 +85,6 @@
 
 <div class="position-sticky pt-3 sidebar-sticky hover-scroll"
     style="height: calc(100vh - 56px); overflow-y: auto; top: 56px;" x-data="{ activeMenu: '{{ $menuAbierto }}' }">
-
-    {{-- ESTILOS CSS --}}
-
 
     {{-- INFO DE USUARIO --}}
     <div class="user-info border-bottom mb-2 pb-2 px-3">
@@ -146,7 +148,7 @@
         @endif
 
 
-        {{--    NORMATIVA                                              --}}
+        {{--    NORMATIVA          --}}
 
         {{-- Usamos hasAnyPermissions de Spatie para preguntar --}}
 
@@ -180,7 +182,7 @@
                     </li>
                     <li class="nav-item">
                         @can('objetivos.ver')
-                            <a class="nav-link submenu-link {{ request()->routeIs('catalogos.pnd.*') ? 'active text-primary' : 'text-secondary' }}"
+                            <a class="nav-link submenu-link {{ request()->routeIs('catalogos.objetivos.*') ? 'active text-primary' : 'text-secondary' }}"
                                 href="{{ route('catalogos.objetivos.index') }}">Objetivos Nacionales</a>
                         @endcan
                     </li>
@@ -207,19 +209,49 @@
         @endif
 
 
-        {{--    ESTRATEGIA (PEI)                                       --}}
+        {{--    ESTRATEGIA (PEI)   --}}
 
         {{-- Lógica OR. Si puede editar organización O gestionar planificación --}}
         @if (auth()->user()->tienePermiso('organizacion.editar') || auth()->user()->tienePermiso('planificacion.gestionar'))
             <div class="sidebar-heading">Estrategia (PEI)</div>
 
-            {{-- Ficha Institucional Solo si tiene permiso (organizacion.editar) --}}
+            {{-- Ficha Institucional --}}
             @if (auth()->user()->tienePermiso('organizacion.editar'))
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('institucional.*') ? 'active' : '' }}"
-                        href="{{ route('institucional.organizaciones.index') }}">
-                        <span data-feather="layout"></span> <span>Institución</span>
+                    <a class="nav-link"
+                        @click.prevent="activeMenu = (activeMenu === 'institucion' ? '' : 'institucion')"
+                        :class="{
+                            'active': activeMenu === 'institucion' ||
+                                '{{ request()->routeIs('institucional.*') || request()->routeIs('admin.unidades.*') }}'
+                        }">
+
+                        <span data-feather="layout"></span>
+                        <span>Institución</span>
+                        <svg class="menu-arrow-svg" :class="{ 'rotate-90': activeMenu === 'institucion' }"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
                     </a>
+                    <ul x-show="activeMenu === 'institucion'" x-collapse class="nav flex-column bg-light">
+
+                        {{-- Organización --}}
+                        <li class="nav-item">
+                            <a class="nav-link submenu-link {{ request()->routeIs('institucional.organizaciones.*') ? 'active text-primary' : 'text-secondary' }}"
+                                href="{{ route('institucional.organizaciones.index') }}">
+                                Organizaciones
+                            </a>
+                        </li>
+
+                        {{-- Unidades Ejecutoras  --}}
+                        <li class="nav-item">
+                            <a class="nav-link submenu-link {{ request()->routeIs('institucional.unidades.*') ? 'active text-primary' : 'text-secondary' }}"
+                                href="{{ route('institucional.unidades.index') }}">
+                                Unidades Ejecutoras
+                            </a>
+                        </li>
+
+                    </ul>
                 </li>
             @endif
 
@@ -242,7 +274,8 @@
                         {{-- Planes Anuales --}}
                         <li class="nav-item"><a
                                 class="nav-link submenu-link {{ request()->routeIs('inversion.planes.*') ? 'active text-primary' : 'text-secondary' }}"
-                                href="{{ route('estrategico.planificacion.planes.index') }}">Planes Institucionales</a></li>
+                                href="{{ route('estrategico.planificacion.planes.index') }}">Planes
+                                Institucionales</a></li>
                         <li class="nav-item"><a
                                 class="nav-link submenu-link {{ request()->routeIs('estrategico.objetivos.*') ? 'active text-primary' : 'text-secondary' }}"
                                 href="{{ route('estrategico.objetivos.index') }}">Objetivos (OEI)</a></li>
@@ -257,7 +290,7 @@
 
 
 
-        {{--    INVERSIÓN (PAI)                                        --}}
+        {{--    INVERSIÓN (PAI)   --}}
 
         @if (auth()->user()->tienePermiso('proyectos.ver'))
             <div class="sidebar-heading">Inversión (PAI)</div>
@@ -275,6 +308,10 @@
                 </a>
 
                 <ul x-show="activeMenu === 'inversion'" x-collapse class="nav flex-column bg-light">
+                    {{-- Plan inversion --}}
+                    <li class="nav-item"><a
+                            class="nav-link submenu-link {{ request()->routeIs('inversion.planes.*') ? 'active text-primary' : 'text-secondary' }}"
+                            href="{{ route('inversion.planes.index') }}">Planes (PAI)</a></li>
 
                     {{-- Programas --}}
                     <li class="nav-item"><a
@@ -289,7 +326,7 @@
             </li>
         @endif
 
-        {{--    CONTROL                                                --}}
+        {{--    CONTROL     --}}
 
         @if (auth()->user()->tienePermiso('auditoria.ver'))
             <div class="sidebar-heading text-danger">Control</div>
@@ -306,9 +343,7 @@
                     </svg>
                 </a>
                 <ul x-show="activeMenu === 'auditoria'" x-collapse class="nav flex-column bg-light">
-                    <li class="nav-item"><a class="nav-link submenu-link text-danger"
-                            href="{{ route('administracion.auditoria.index') }}">Dashboard Control</a></li>
-                    <li class="nav-item"><a class="nav-link submenu-link text-danger" href="#">Logs de
+                    <li class="nav-item"><a class="nav-link submenu-link text-danger" href="{{ route('administracion.auditoria.index') }}">Logs de
                             Actividad</a></li>
                 </ul>
             </li>

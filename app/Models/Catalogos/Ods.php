@@ -25,20 +25,28 @@ class Ods extends Model
         'estado',
         'color_hex'
     ];
-
-
-
-    /**
-     * Relación Inversa: Muchos a Muchos
-     * Que objetivos estratégicos apuntan al ODS 4
-     */
-    public function objetivosEstrategicos()
+    //Relacion: muchos ods pertenecen a muchas metas
+    public function metasNacionales()
     {
-        //return $this->belongsToMany(
-        //    ObjetivoEstrategico::class,
-        //    'piv_objetivo_ods',
-        //    'id_ods',
-        //    'id_objetivo_estrategico'
-        //);
+        return $this->belongsToMany(
+            MetaNacional::class,
+            'alineacion_metas_ods',
+            'id_ods',
+            'id_meta_nacional',
+            'id_ods',
+            'id_meta_nacional'
+        );
+    }
+    //Calculo de contribucion
+    public function getAvancePromedioAttribute()
+    {
+        if ($this->metasNacionales->isEmpty()) {
+            return 0;
+        }
+        $sumaAvances = 0;
+        foreach ($this->metasNacionales as $meta) {
+            $sumaAvances += $meta->avance_actual;
+        }
+        return $sumaAvances / $this->metasNacionales->count();
     }
 }

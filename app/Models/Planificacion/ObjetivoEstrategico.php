@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Catalogos\Ods;
-use App\Models\Catalogos\MetaNacional;
+Use App\Models\Catalogos\MetaNacional;
 use App\Models\Institucional\OrganizacionEstatal;
 use App\Models\Planificacion\AlineacionEstrategica;
 use App\Models\Inversion\ProyectoInversion;
@@ -22,8 +22,9 @@ class ObjetivoEstrategico extends Model
     protected $primaryKey = 'id_objetivo_estrategico';
 
     protected $fillable = [
-        'id_organizacion',
-        'id_plan',
+        'organizacion_id',
+        'usuario_id',
+        'plan_id',
         'codigo',
         'nombre',
         'descripcion',
@@ -34,8 +35,9 @@ class ObjetivoEstrategico extends Model
         'indicador',
         'fecha_inicio',
         'fecha_fin',
-        'tipo_documento',
         'estado',
+        'url_documento',
+        'nombre_archivo',
     ];
 
     public $timestamps = true; // O false, dependiendo de tu tabla
@@ -81,12 +83,14 @@ class ObjetivoEstrategico extends Model
             //'id_ods'
         );
     }
-     public function getInfoAlineacionAttribute()
+    //
+    public function getInfoAlineacionAttribute()
     {
-        // Preparamos la estructura tal como la necesitas
+        // Preparamos la estructura
         return $this->metasNacionales->map(fn($m) => [
+            'id'     => $m->id_meta_nacional,
             'codigo' => $m->codigo_meta,
-            'nombre' => $m->nombre_meta,
+            'descripcion' => $m->nombre_meta,
             'ods'    => $m->ods->map(fn($o) => [
                 'numero' => $o->codigo ?? $o->id_ods,
                 'nombre' => $o->nombre,
@@ -99,7 +103,7 @@ class ObjetivoEstrategico extends Model
     {
         return $this->hasMany(
             ProyectoInversion::class,
-            'id_objetivo_estrategico',
+            'objetivo_estrategico_id',
             'id_objetivo_estrategico'
         );
     }
@@ -110,5 +114,15 @@ class ObjetivoEstrategico extends Model
 
         // Si existe alineación -> meta -> obj nacional, devuelve el EJE. Si no, null.
         return $alineacion?->metaNacional?->objetivoNacional?->eje;
+    }
+
+    public function getDocumentoRespaldoAttribute()
+    {
+        // Prioridad: El objetivo tiene su propio documento específico
+        if ($this->url_documento) {
+            return $this->url_documento;
+        }
+        //
+        return $this->plan->url_documento;
     }
 }

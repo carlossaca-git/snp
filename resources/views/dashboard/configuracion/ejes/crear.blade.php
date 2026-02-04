@@ -12,10 +12,7 @@
             <form action="{{ route('catalogos.ejes.store') }}" method="POST" id="formCreateEje">
                 @csrf
                 <div class="modal-body">
-                    {{-- Campo oculto con el ID del plan --}}
                     <input type="hidden" name="id_plan" value="{{ $planActivo->id_plan ?? '' }}">
-
-                    {{-- Visualización para el usuario  --}}
                     <div class="mb-3">
                         <label class="form-label fw-bold text-muted">Plan Nacional Vigente</label>
                         <div class="input-group">
@@ -28,26 +25,12 @@
                             <small class="text-danger">Debe activar un Plan Nacional antes de crear ejes.</small>
                         @endif
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">Nombre del Eje</label>
                         <input type="text" name="nombre_eje" class="form-control" placeholder="Ej: Eje Social"
                             required value="{{ old('nombre_eje') }}">
                     </div>
-
-                    {{-- Periodos --}}
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Año Inicio</label>
-                            <input type="number" name="periodo_inicio" id="create_periodo_inicio" class="form-control"
-                                placeholder="2024" required value="{{ old('periodo_inicio') }}">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">Año Fin</label>
-                            <input type="number" name="periodo_fin" id="create_periodo_fin" class="form-control"
-                                placeholder="2025" required value="{{ old('periodo_fin') }}">
-                        </div>
-                    </div>
-
                     {{-- Descripción --}}
                     <div class="mb-3">
                         <label class="form-label fw-bold">Descripción</label>

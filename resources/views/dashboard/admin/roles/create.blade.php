@@ -1,32 +1,32 @@
 @extends('layouts.app')
 <style>
-        .permission-card {
-            transition: transform 0.2s;
-            border: none;
-            border-radius: 10px;
-        }
+    .permission-card {
+        transition: transform 0.2s;
+        border: none;
+        border-radius: 10px;
+    }
 
-        .permission-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
-        }
+    .permission-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+    }
 
-        .border-left-Institucional {
-            border-left: 4px solid #4e73df !important;
-        }
+    .border-left-Institucional {
+        border-left: 4px solid #4e73df !important;
+    }
 
-        .border-left-Inversión {
-            border-left: 4px solid #1cc88a !important;
-        }
+    .border-left-Inversión {
+        border-left: 4px solid #1cc88a !important;
+    }
 
-        .border-left-Planificación {
-            border-left: 4px solid #36b9cc !important;
-        }
+    .border-left-Planificación {
+        border-left: 4px solid #36b9cc !important;
+    }
 
-        .border-left-Seguimiento {
-            border-left: 4px solid #f6c23e !important;
-        }
-    </style>
+    .border-left-Seguimiento {
+        border-left: 4px solid #f6c23e !important;
+    }
+</style>
 @section('content')
     <div class="container-fluid">
 
@@ -36,7 +36,7 @@
                 <i class="fas fa-arrow-left"></i> Volver al listado
             </a>
         </div>
-
+        @include('partials.mensajes')
         <form action="{{ route('administracion.roles.store') }}" method="POST">
             @csrf
 
@@ -49,7 +49,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label fw-bold">Nombre del Rol <span class="text-danger">*</span></label>
-                                <input type="text" name="nombre"
+                                <input type="text" name="nombre_corto"
                                     class="form-control @error('nombre') is-invalid @enderror" value="{{ old('nombre') }}"
                                     placeholder="Ej: Auditor Financiero" required autofocus>
                                 @error('nombre')
@@ -114,7 +114,7 @@
                                         <label
                                             class="list-group-item d-flex justify-content-between align-items-center px-0 border-0">
                                             <div class="ms-2">
-                                                <span class="fw-bold text-dark">{{ $permiso->nombre }}</span>
+                                                <span class="fw-bold text-dark">{{ $permiso->name }}</span>
                                                 <br>
                                                 <small class="text-muted" style="font-size: 0.75rem;">
                                                     {{ $permiso->descripcion }}
@@ -145,7 +145,6 @@
 @endsection
 
 @push('scripts')
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const masterToggles = document.querySelectorAll('.check-all');

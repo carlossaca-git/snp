@@ -15,7 +15,7 @@
                     <div class="row">
                         <div class="col-12 mb-3">
                             <label class="form-label fw-bold">1. Objetivo Nacional Vinculado</label>
-                            <select name="id_objetivo_nacional" id="id_objetivo_crear"
+                            <select name="objetivo_nacional_id" id="id_objetivo_crear"
                                 class="form-select @error('id_objetivo') is-invalid @enderror" required>
                                 <option value="" selected disabled>-- Seleccione el Objetivo al que pertenece esta
                                     meta --</option>
@@ -52,14 +52,18 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">5. Unidad de Medida</label>
-                            <select name="unidad_medida" class="form-select" required>
-                                <option value="" disabled selected>-- Seleccione --</option>
-                                <option value="Porcentaje">Porcentaje (%)</option>
-                                <option value="Tasa">Tasa</option>
-                                <option value="Indice">Índice</option>
-                                <option value="Número Absoluto">Número Absoluto</option>
-                                <option value="USD">Dólares (USD)</option>
-                            </select>
+                            <select name="unidad_medida" id="edit_unidad" class="form-select" required>
+                                    <option value="" disabled selected>-- Seleccione una opción --</option>
+                                    <option value="Porcentaje (%)">Porcentaje (%)</option>
+                                    <option value="Tasa por 100k hab." >Tasa por 100k hab.</option>
+                                    <option value="Índice (0-100)" >Índice (0-100)</option>
+                                    <option value="Unidades">Unidades</option>
+                                    <option value="Millones USD" >Millones USD</option>
+                                    <option value="Número personas">Numero Personas</option>
+                                    <option value="Megavatios (MW)" >Megavatios (MW)</option>
+                                    <option value="Relación 1:1000" >Realacion 1:1000</option>
+                                    <option value="Puesto Mundial">Puesto Mundial</option>
+                                </select>
                         </div>
                         {{-- Cuantificación --}}
                         <div class="col-md-6 mb-3">

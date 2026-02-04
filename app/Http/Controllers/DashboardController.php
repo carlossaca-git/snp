@@ -20,31 +20,28 @@ class DashboardController extends Controller
     {
         $idOrganizacion = Auth::user()->id_organizacion;
 
-        // ------------------------------------------------------
-        // KPIs DE PROYECTOS (Directo con la Organización)
-        // ------------------------------------------------------
-        $proyectosQuery = ProyectoInversion::where('id_organizacion', $idOrganizacion);
+        // KPIs DE PROYECTOS
+
+        $proyectosQuery = ProyectoInversion::where('organizacion_id', $idOrganizacion);
 
         $totalProyectos = $proyectosQuery->count();
         $montoTotal = $proyectosQuery->sum('monto_total_inversion');
         $proyectosFavorables = (clone $proyectosQuery)->where('estado_dictamen', 'FAVORABLE')->count();
         $proyectosPendientes = (clone $proyectosQuery)->whereIn('estado_dictamen', ['PENDIENTE', 'REVISION', null])->count();
 
-        $ultimosProyectos = ProyectoInversion::where('id_organizacion', $idOrganizacion)
+        $ultimosProyectos = ProyectoInversion::where('organizacion_id', $idOrganizacion)
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
-        // ------------------------------------------------------
-        // METAS NACIONALES (Usando la tabla ALINEACIÓN)
-        // ------------------------------------------------------
+        // METAS NACIONALES
 
         // Obtenemos las Metas Nacionales que tu organización ha seleccionado en la tabla de alineaciones
         $metasNacionales = MetaNacional::whereHas('alineacion', function ($q) use ($idOrganizacion) {
             // Entramos a la tabla intermedia 'alineacion_estrategica'
             // Y verificamos que el Objetivo Estratégico asociado sea de MI organización
             $q->whereHas('objetivoEstrategico', function ($q2) use ($idOrganizacion) {
-                $q2->where('id_organizacion', $idOrganizacion);
+                $q2->where('organizacion_id', $idOrganizacion);
             });
         })
             ->with('objetivoNacional') // Cargamos el padre para ver info si hace falta
@@ -59,7 +56,7 @@ class DashboardController extends Controller
         $metasNacionales->transform(function ($meta) use ($idOrganizacion, &$indicadoresCriticos, &$sumaPromedios, &$metasConProyectos) {
 
             // BUSCAMOS LOS PROYECTOS QUE CONTRIBUYEN A ESTA META ESPECÍFICA
-            $proyectos = ProyectoInversion::where('id_organizacion', $idOrganizacion)
+            $proyectos = ProyectoInversion::where('organizacion_id', $idOrganizacion)
                 ->whereHas('programa.objetivoE.alineacion', function ($q) use ($meta) {
                     $q->where('meta_nacional_id', $meta->id_meta_nacional);
                 })
@@ -92,28 +89,24 @@ class DashboardController extends Controller
             ? round($sumaPromedios / $metasConProyectos, 2)
             : 0;
 
-        // ------------------------------------------------------
-        //  GRÁFICO INVERSIÓN POR EJE (Join Manual)
-        // ------------------------------------------------------
+        //  GRÁFICO INVERSIÓN POR EJE
 
         $inversionPorEje = DB::table('tra_proyecto_inversion as p')
-            ->join('tra_programa as prog', 'p.id_programa', '=', 'prog.id')
-            ->join('cat_objetivo_estrategico as oe', 'prog.id_objetivo_estrategico', '=', 'oe.id_objetivo_estrategico')
+            ->join('tra_programa as prog', 'p.programa_id', '=', 'prog.id')
+            ->join('cat_objetivo_estrategico as oe', 'prog.objetivo_estrategico_id', '=', 'oe.id_objetivo_estrategico')
 
             ->join('alineacion_estrategica as ae', 'oe.id_objetivo_estrategico', '=', 'ae.objetivo_estrategico_id')
 
             ->join('cat_meta_nacional as mn', 'ae.meta_nacional_id', '=', 'mn.id_meta_nacional')
-            ->join('cat_objetivo_nacional as onac', 'mn.id_objetivo_nacional', '=', 'onac.id_objetivo_nacional')
+            ->join('cat_objetivo_nacional as onac', 'mn.objetivo_nacional_id', '=', 'onac.id_objetivo_nacional')
             ->join('cat_eje_pnd as eje', 'onac.id_eje', '=', 'eje.id_eje')
-            ->where('p.id_organizacion', $idOrganizacion)
+            ->where('p.organizacion_id', $idOrganizacion)
             ->select('eje.nombre_eje', DB::raw('SUM(p.monto_total_inversion) as total'))
             ->groupBy('eje.nombre_eje')
             ->get();
 
-        // ------------------------------------------------------
         // GRÁFICO ESTADOS DE DICTAMEN
-        // ------------------------------------------------------
-        $estadosDictamen = ProyectoInversion::where('id_organizacion', $idOrganizacion)
+        $estadosDictamen = ProyectoInversion::where('organizacion_id', $idOrganizacion)
             ->select('estado_dictamen', DB::raw('count(*) as total'))
             ->groupBy('estado_dictamen')
             ->get();
@@ -152,7 +145,7 @@ class DashboardController extends Controller
             }
 
             //  CONSULTA BASE (Filtro de Organización)
-            $query = ProyectoInversion::where('id_organizacion', $idOrganizacion)
+            $query = ProyectoInversion::where('organizacion_id', $idOrganizacion)
                 ->whereBetween('created_at', [$inicio, $fin]);
 
             //  RECALCULAR KPIs
@@ -175,16 +168,16 @@ class DashboardController extends Controller
 
             //  GRÁFICO INVERSIÓN POR EJE
             $inversionPorEje = DB::table('tra_proyecto_inversion as p')
-                ->join('tra_programa as prog', 'p.id_programa', '=', 'prog.id')
-                ->join('cat_objetivo_estrategico as oe', 'prog.id_objetivo_estrategico', '=', 'oe.id_objetivo_estrategico')
+                ->join('tra_programa as prog', 'p.programa_id', '=', 'prog.id')
+                ->join('cat_objetivo_estrategico as oe', 'prog.objetivo_estrategico_id', '=', 'oe.id_objetivo_estrategico')
                 ->join('alineacion_estrategica as ae', 'oe.id_objetivo_estrategico', '=', 'ae.objetivo_estrategico_id')
                 ->join('cat_meta_nacional as mn', 'ae.meta_nacional_id', '=', 'mn.id_meta_nacional')
-                ->join('cat_objetivo_nacional as onac', 'mn.id_objetivo_nacional', '=', 'onac.id_objetivo_nacional')
+                ->join('cat_objetivo_nacional as onac', 'mn.objetivo_nacional_id', '=', 'onac.id_objetivo_nacional')
                 ->join('cat_eje_pnd as e', 'onac.id_eje', '=', 'e.id_eje')
                 // Aplicar filtros de organización y fechas
                 ->select('e.nombre_eje', DB::raw('SUM(p.monto_total_inversion) as total'))
 
-                ->where('p.id_organizacion', $idOrganizacion)
+                ->where('p.organizacion_id', $idOrganizacion)
                 ->whereBetween('p.created_at', [$inicio, $fin])
 
                 ->groupBy('e.nombre_eje')
@@ -261,7 +254,7 @@ class DashboardController extends Controller
         }
 
         // CONSULTA PROYECTOS (Eloquent)
-        $query = ProyectoInversion::where('id_organizacion', $idOrganizacion)
+        $query = ProyectoInversion::where('organizacion_id', $idOrganizacion)
             ->whereBetween('created_at', [$inicio, $fin]);
 
         // Cargamos relaciones para el listado general
@@ -290,15 +283,15 @@ class DashboardController extends Controller
 
         // INVERSIÓN DETALLADA (SQL MANUAL)
         $inversionDetallada = DB::table('tra_proyecto_inversion as p')
-            ->join('tra_programa as prog', 'p.id_programa', '=', 'prog.id')
-            ->join('cat_objetivo_estrategico as oe', 'prog.id_objetivo_estrategico', '=', 'oe.id_objetivo_estrategico')
+            ->join('tra_programa as prog', 'p.programa_id', '=', 'prog.id')
+            ->join('cat_objetivo_estrategico as oe', 'prog.objetivo_estrategico_id', '=', 'oe.id_objetivo_estrategico')
 
             // PUENTE ALINEACIÓN
             ->join('alineacion_estrategica as ae', 'oe.id_objetivo_estrategico', '=', 'ae.objetivo_estrategico_id')
             ->join('cat_meta_nacional as mn', 'ae.meta_nacional_id', '=', 'mn.id_meta_nacional')
 
             // Hacia arriba (Plan Nacional)
-            ->join('cat_objetivo_nacional as onac', 'mn.id_objetivo_nacional', '=', 'onac.id_objetivo_nacional')
+            ->join('cat_objetivo_nacional as onac', 'mn.objetivo_nacional_id', '=', 'onac.id_objetivo_nacional')
             ->join('cat_eje_pnd as e', 'onac.id_eje', '=', 'e.id_eje')
 
             // ODS  Left Join para no perder datos si no hay ODS
@@ -314,7 +307,7 @@ class DashboardController extends Controller
                 'ods.codigo as codigo_ods',
                 DB::raw('SUM(p.monto_total_inversion) as total')
             )
-            ->where('p.id_organizacion', $idOrganizacion)
+            ->where('p.organizacion_id', $idOrganizacion)
             ->whereBetween('p.created_at', [$inicio, $fin])
 
             // Agrupamiento

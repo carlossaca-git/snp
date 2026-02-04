@@ -75,7 +75,8 @@
                                     <select name="id_programa" class="form-select border-2" required>
                                         <option value="" disabled selected>-- Seleccione Programa --</option>
                                         @foreach ($programas as $programa)
-                                            <option value="{{ $programa->id }}">{{ $programa->nombre_programa }}</option>
+                                            <option value="{{ $programa->id }}">{{ $programa->codigo_programa }} -
+                                                {{ $programa->nombre_programa }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -98,15 +99,6 @@
                                             placeholder="0.00" required>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">Estado Dictamen</label>
-                                    <select name="estado_dictamen" class="form-select border-2" required>
-                                        <option value="PENDIENTE">Pendiente</option>
-                                        <option value="FAVORABLE">Favorable</option>
-                                        <option value="OBSERVADO">Con Observaciones</option>
-                                    </select>
-                                </div>
-
                                 {{-- Fechas --}}
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold">Fecha Inicio</label>
@@ -163,11 +155,10 @@
                                 </div>
                             </div>
                         </div>
-
                         {{--  ALINEACIÓN ESTRATÉGICA  --}}
                         <div class="tab-pane fade" id="alineacion" role="tabpanel">
                             <div class="row justify-content-center">
-                                <div class="col-md-10">
+                                <div class="col-md-12">
                                     <div class="alert alert-info border-0 shadow-sm mb-4">
                                         <div class="d-flex">
                                             <i class="fas fa-sitemap fa-2x me-3 opacity-50"></i>
@@ -179,31 +170,66 @@
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div class="mb-4">
-                                        <label class="form-label fw-bold">Objetivo Estratégico (PEI)</label>
-                                        <select name="id_objetivo_estrategico" id="select_objetivo"
-                                            class="form-select form-select-lg shadow-sm" required>
-                                            <option value="">-- Seleccione Objetivo --</option>
-                                            @foreach ($objetivos as $obj)
-                                                <option value="{{ $obj->id_objetivo_estrategico }}"
-                                                    data-metas='@json($obj->info_alineacion)'>
-                                                    {{ $obj->codigo }} - {{ Str::limit($obj->nombre, 100) }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    {{-- Tarjeta de Feedback Automático --}}
-                                    <div id="info_alineacion" class="card bg-light border-0 shadow-sm d-none">
+                                    {{-- SELECT DE OBJETIVO --}}
+                                    <div class="card mb-4 border-left-primary shadow-sm">
                                         <div class="card-body">
-                                            <h6 class="text-secondary fw-bold text-uppercase small mb-3">
-                                                <i class="fas fa-network-wired me-1"></i> Impacto Nacional Identificado
-                                            </h6>
-                                            <div id="lista_metas_container"></div>
+                                            <label class="fw-bold text-primary">1. Seleccione Objetivo Estratégico:</label>
+                                            <select id="select_objetivo" name="objetivo_estrategico_id"
+                                                class="form-select">
+                                                <option value="">-- Seleccione --</option>
+                                                @foreach ($objetivosEstr as $obj)
+                                                    <option value="{{ $obj->id_objetivo_estrategico }}">{{ $obj->codigo }}
+                                                        - {{ $obj->nombre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        {{-- SELECCIÓN DE METAS --}}
+                                        <div class="col-md-4">
+                                            <div class="card h-100 shadow-sm">
+                                                <div class="card-header bg-light fw-bold">2. Seleccione Metas Impactadas
+                                                </div>
+                                                <div class="card-body" id="contenedor_metas">
+                                                    <div class="text-muted small text-center p-3">
+                                                        Seleccione un objetivo primero.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {{-- SELECCIÓN DE INDICADORES --}}
+                                        <div class="col-md-8">
+                                            <div class="card h-100 shadow-sm">
+                                                <div class="card-header bg-light fw-bold">3. Defina Contribución a
+                                                    Indicadores</div>
+                                                <div class="card-body p-0">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-hover align-middle mb-0">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th width="5%">Sel.</th>
+                                                                    <th>Indicador / Meta</th>
+                                                                    <th width="15%">Peso PND</th>
+                                                                    <th width="20%">Tu Aporte %</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="tabla_indicadores">
+                                                                <tr>
+                                                                    <td colspan="4" class="text-center p-4 text-muted">
+                                                                        Seleccione metas a la izquierda.</td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         {{--  DIAGNÓSTICO Y UBICACIÓN --}}
@@ -306,8 +332,7 @@
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="eliminarFila(this)"><i class="fas fa-times"></i></button>
-            </td>
-        `;
+            </td>`;
                 cuerpo.appendChild(fila);
             }
 
@@ -336,15 +361,12 @@
                     if (cuadra) alerta.classList.add('d-none');
                     else alerta.classList.remove('d-none');
                 }
-
                 validarBotonGuardar(cuadra);
             }
 
             function validarBotonGuardar(presupuestoCuadra) {
                 const btn = document.getElementById('btnGuardarProyecto');
                 const form = document.querySelector('form');
-
-                // Validación simple: Si el presupuesto cuadra y el formulario HTML es válido
                 if (presupuestoCuadra && form.checkValidity()) {
                     btn.disabled = false;
                     btn.classList.remove('btn-secondary');
@@ -356,84 +378,13 @@
                 }
             }
 
-            // Event Listeners Globales
+            // Event Listeners Globales para montos
             document.addEventListener('input', function(e) {
                 if (e.target.classList.contains('monto-input') || e.target.id === 'monto_total_inversion') {
                     calcularTotal();
-                } else {
-                    // Re-validar botón si cambian otros campos
-                    const global = parseFloat(document.getElementById('monto_total_inversion').value) || 0;
-                    let suma = 0;
-                    document.querySelectorAll('.monto-input').forEach(i => suma += parseFloat(i.value) || 0);
-                    const cuadra = (global > 0 && Math.abs(suma - global) <= 0.01);
-                    validarBotonGuardar(cuadra);
                 }
             });
-            // ALINEACIÓN OBJETIVOS - METAS
-            document.addEventListener('DOMContentLoaded', function() {
 
-                const selectObj = document.getElementById('select_objetivo');
-                const containerMeta = document.getElementById('info_alineacion');
-                const listaDivMeta = document.getElementById('lista_metas_container');
-
-                function mostrarAlineacion() {
-                    listaDivMeta.innerHTML = '';
-
-                    if (!selectObj.value) {
-                        containerMeta.classList.add('d-none');
-                        return;
-                    }
-
-                    const option = selectObj.options[selectObj.selectedIndex];
-                    const rawData = option.getAttribute('data-metas');
-
-                    if (!rawData) return;
-
-                    const metas = JSON.parse(rawData);
-
-                    if (metas.length > 0) {
-                        metas.forEach(meta => {
-
-                            // Construir Badges de ODS
-                            let htmlODS = '';
-                            if (meta.ods && meta.ods.length > 0) {
-                                htmlODS = '<div class="mt-2 d-flex flex-wrap gap-1">';
-
-                                meta.ods.forEach(ods => {
-                                    const bg = ods.color || '#6c757d';
-
-                                    htmlODS += `
-                                <span class="badge border border-white shadow-sm"
-                                      style="background-color: ${bg}; color: white;"
-                                      title="${ods.nombre}">
-                                    ODS ${ods.numero}
-                                </span>
-                            `;
-                                });
-                                htmlODS += '</div>';
-                            }
-
-                            const html = `
-                        <div class="border-bottom pb-2 mb-2">
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
-                                META ${meta.codigo}
-                            </span>
-                            <div class="small fw-bold mt-1 text-dark">${meta.nombre}</div>
-                            ${htmlODS}
-                        </div>`;
-
-                            listaDivMeta.insertAdjacentHTML('beforeend', html);
-                        });
-                        containerMeta.classList.remove('d-none');
-                    } else {
-                        listaDivMeta.innerHTML = '<span class="text-muted small">Sin alineación configurada</span>';
-                        containerMeta.classList.remove('d-none');
-                    }
-                }
-
-                selectObj.addEventListener('change', mostrarAlineacion);
-                mostrarAlineacion();
-            });
             // --- FECHAS ---
             const fInicio = document.getElementById('fecha_inicio');
             const fFin = document.getElementById('fecha_fin');
@@ -538,7 +489,7 @@
                         if (listaParroquias) {
                             selParroquia.disabled = false;
 
-                            // Recorremos las parroquias ("10101": "BELLAVISTA")
+                            // Recorremos las parroquias
                             for (let idParr in listaParroquias) {
                                 const nombreParroquia = listaParroquias[idParr];
 
@@ -549,7 +500,7 @@
                     }
                 });
             });
-            // --- ARCHIVOS ---
+            // ARCHIVOS
             function updateFileName(input) {
                 const nameContainer = document.getElementById('file-name');
                 const area = document.getElementById('drop-area');
@@ -560,6 +511,152 @@
                     nameContainer.classList.add('text-success');
                     area.classList.add('border-success');
                 }
+            }
+            // Variable global para guardar los datos que traemos del servidor
+            let metasData = [];
+
+            // EVENTO  CAMBIO DE OBJETIVO
+            document.getElementById('select_objetivo').addEventListener('change', function() {
+                let idObj = this.value;
+                let divMetas = document.getElementById('contenedor_metas');
+                let tbody = document.getElementById('tabla_indicadores');
+
+                // Limpiar todo
+                divMetas.innerHTML =
+                    '<div class="text-center p-2"><div class="spinner-border spinner-border-sm text-primary"></div> Cargando...</div>';
+                tbody.innerHTML =
+                    '<tr><td colspan="4" class="text-center p-4 text-muted">Seleccione metas a la izquierda.</td></tr>';
+                metasData = [];
+
+                if (!idObj) return;
+
+                // Petición AJAX
+                fetch(`{{ url('estrategico/alineacion') }}/api/objetivos/${idObj}/arbol-alineacion`)
+                    .then(res => res.json())
+                    .then(data => {
+                        metasData = data;
+                        divMetas.innerHTML = '';
+
+                        if (data.length === 0) {
+                            divMetas.innerHTML =
+                                '<div class="alert alert-warning small">Este objetivo no tiene metas alineadas.</div>';
+                            return;
+                        }
+                        // Dibujar Checkboxes de Metas
+                        data.forEach(meta => {
+                            divMetas.innerHTML += `
+                        <div class="form-check border-bottom py-2">
+                            <input class="form-check-input check-meta"
+                            type="checkbox"
+                            name="metas_id[]"
+                            value="${meta.id_meta_nacional}" id="meta_${meta.id_meta_nacional}">
+                            <label class="form-check-label small fw-bold" for="meta_${meta.id_meta_nacional}">
+                                ${meta.codigo_meta}
+                            </label>
+                            <div class="text-muted extra-small">${meta.nombre_meta.substring(0, 60)}...</div>
+                        </div>
+                    `;
+                        });
+
+                        // Activar listeners para los nuevos checkboxes
+                        activarListenersMetas();
+                    });
+            });
+
+            // EVENTO  CAMBIO EN CHECKBOX DE META
+            function activarListenersMetas() {
+                document.querySelectorAll('.check-meta').forEach(check => {
+                    check.addEventListener('change', function() {
+                        actualizarTablaIndicadores();
+                    });
+                });
+            }
+
+            function actualizarTablaIndicadores() {
+                let tbody = document.getElementById('tabla_indicadores');
+                tbody.innerHTML = '';
+
+                let checksMarcados = document.querySelectorAll('.check-meta:checked');
+
+                if (checksMarcados.length === 0) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" class="text-center p-4 text-muted">Seleccione metas a la izquierda.</td></tr>';
+                    return;
+                }
+
+                checksMarcados.forEach(chk => {
+                    let metaId = parseInt(chk.value);
+                    let metaInfo = metasData.find(m => m.id_meta_nacional === metaId);
+
+                    if (metaInfo && metaInfo.indicadores_nacionales.length > 0) {
+                        // Cabecera de Meta
+                        tbody.innerHTML += `
+                <tr class="table-secondary"><td colspan="4" class="py-1 px-3 small fw-bold text-dark">
+                    <i class="fas fa-bullseye me-1"></i> ${metaInfo.codigo_meta} - ${metaInfo.nombre_meta}
+                </td></tr>
+            `;
+
+                        metaInfo.indicadores_nacionales.forEach(ind => {
+                            //  Creamos un ID ÚNICO para cada input usando el ID del indicador
+                            // Ejemplo: id="peso_105", id="peso_106"
+                            let idUnicoInput = `peso_${ind.id_indicador}`;
+
+                            tbody.innerHTML += `
+                    <tr>
+                        <td class="text-center">
+                            <input class="form-check-input check-ind"
+                                   type="checkbox"
+                                   name="indicadores[]"
+                                   value="${ind.id_indicador}"
+                                   data-target="${idUnicoInput}"> </td>
+                        <td>
+                            <div class="fw-bold small">${ind.codigo_indicador ?? 'S/C'}</div>
+                            <div class="small text-muted">${ind.nombre_indicador}</div>
+                        </td>
+                        <td><span class="badge bg-white text-dark border">${ind.peso_oficial ?? 0}%</span></td>
+                        <td>
+                            <div class="input-group input-group-sm">
+                                <input type="number"
+                                       class="form-control"
+                                       name="contribuciones[${ind.id_indicador}]"
+                                       id="${idUnicoInput}"
+                                       disabled
+                                       placeholder="0" min="0" max="100">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                        });
+                    }
+                });
+            }
+            document.getElementById('tabla_indicadores').addEventListener('change', function(e) {
+                // Verificamos si lo que cambió fue un checkbox de indicador
+                if (e.target && e.target.classList.contains('check-ind')) {
+
+                    // Buscamos el ID del input objetivo que guardamos en 'data-target'
+                    let targetId = e.target.getAttribute('data-target');
+                    let inputPeso = document.getElementById(targetId);
+
+                    if (inputPeso) {
+                        inputPeso.disabled = !e.target.checked;
+
+                        if (!e.target.checked) {
+                            inputPeso.value = '';
+                            inputPeso.classList.remove('is-valid');
+                        } else {
+                            inputPeso.focus();
+                        }
+                    }
+                }
+            });
+            // Activar/Desactivar el input de peso
+            window.togglePeso = function(chk, id) {
+                let input = document.getElementById(`peso_${id}`);
+                input.disabled = !chk.checked;
+                if (!chk.checked) input.value = '';
+                else input.focus();
             }
         </script>
     @endpush

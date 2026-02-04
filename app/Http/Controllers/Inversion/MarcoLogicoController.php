@@ -187,8 +187,8 @@ class MarcoLogicoController extends Controller
                 'marco_logico_id' => $actividad->id_marco_logico,
                 'fecha_reporte'   => $request->fecha_reporte,
                 'avance_total_acumulado' => $request->avance_total_acumulado,
-                // Calculamos cuánto avanzó solo en este reporte
-                'avance_reportado' => $request->avance_total_acumulado - $actividad->avance_actual,
+                // Calculamos el avance solo en este reporte
+                'avance_reportado' => $request->avance_total_acumulado - ($actividad->avance_actual ?? 0),
                 'observacion'     => $request->observacion,
                 'created_at'      => now(),
                 'updated_at'      => now()
@@ -209,31 +209,43 @@ class MarcoLogicoController extends Controller
     /**
      * Recalcula el avance físico del proyecto basándose en el promedio de sus actividades.
      */
-    /**
-     * Recalcula el avance físico del proyecto basándose en el promedio de sus actividades.
-     */
     private function actualizarAvanceProyecto($idProyecto)
     {
         try {
-            //OBTENER EL PROMEDIO DE AVANCE DE LAS ACTIVIDADES
-            $promedio = MarcoLogico::where('proyecto_id', $idProyecto)
+            //OBTENER LAS ACTIVIDADES
+            // Usamos get() para traerlas y calcular en PHP, es más seguro para la lógica ponderada
+            $actividades = MarcoLogico::where('proyecto_id', $idProyecto)
                 ->where(function ($q) {
-                    $q->where('nivel', 'ACTIVIDAD')
-                      ->orWhere('nivel', 'Actividad')
-                      ->orWhere('nivel', 'actividad');
+                    // Optimizamos el filtro de mayúsculas/minúsculas
+                    $q->whereIn('nivel', ['ACTIVIDAD', 'Actividad', 'actividad']);
                 })
-                ->avg('avance_actual');
-            // Redondear a 2 decimales y manejar nulls
-            $avanceFinal = $promedio ? round($promedio, 2) : 0.00;
-            //ACTUALIZAR EL PROYECTO
+                ->get(['avance_actual', 'ponderacion']);
+
+            // CALCULO PONDERADO
+            $avanceFinal = 0;
+
+            if ($actividades->isNotEmpty()) {
+                $totalPonderacion = $actividades->sum('ponderacion');
+
+                // Validación (no divicion por cero) por cero
+                if ($totalPonderacion > 0) {
+                    $sumaPonderada = $actividades->sum(function ($act) {
+                        return ($act->avance_actual ?? 0) * ($act->ponderacion ?? 0);
+                    });
+
+                    // Resultado: (Suma / TotalPesos)
+                    $avanceFinal = $sumaPonderada / $totalPonderacion;
+                }
+            }
+
+            // Redondeamos para guardar limpio en BD
+            $avanceFinal = round($avanceFinal, 2);
+
+            // ACTUALIZAR EL PROYECTO
             $affected = DB::table('tra_proyecto_inversion')
                 ->where('id', $idProyecto)
                 ->update(['avance_fisico_real' => $avanceFinal]);
-
-            // Log para verificar si se actualizó algo
-            if ($affected === 0) {
-                Log::warning("No se actualizó el proyecto ID $idProyecto. Puede que el ID no exista o el valor ya era el mismo.");
-            }
+            // Log::info("Proyecto $idProyecto actualizado a: $avanceFinal%");
 
         } catch (\Exception $e) {
             Log::error("Error actualizando avance proyecto $idProyecto: " . $e->getMessage());

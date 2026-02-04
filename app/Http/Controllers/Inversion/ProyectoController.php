@@ -7,19 +7,19 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\faceades\Exception;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 
 // Modelos de Configuración
-use App\Models\Catalogos\Eje;
-use App\Models\Catalogos\EjePnd;
+use App\Models\Catalogos\IndicadorNacional;
 use App\Models\Catalogos\ObjetivoNacional;
 use App\Models\Institucional\OrganizacionEstatal;
 use App\Models\Institucional\UnidadEjecutora;
 use App\Models\Seguridad\User;
 
 // Modelos de Inversión
-use App\Models\Planificacion\Programa;
+use App\Models\Inversion\Programa;
 use App\Models\Inversion\ProyectoInversion;
 use App\Models\Inversion\ProyectoLocalizacion;
 use App\Models\Inversion\FuenteFinanciamiento;
@@ -30,7 +30,6 @@ use PhpParser\Builder\Function_;
 //Modelos planificacion
 use App\Models\Planificacion\ObjetivoEstrategico;
 
-use function Symfony\Component\String\s;
 
 class ProyectoController extends Controller
 {
@@ -46,16 +45,16 @@ class ProyectoController extends Controller
         $query = ProyectoInversion::with([
             'organizacion',
             'programa',
-            'objetivo',
+            'objetivoEstrategico',
             'unidadEjecutora',
             'marcoLogico'
         ]);
 
         //  Filtros de Seguridad
-        if (!$user->tieneRol('SUPER_ADMIN')) {
-            $query->where('id_organizacion', $user->id_organizacion);
+        if (!method_exists($user, 'hasRole') || !$user->hasRole('SUPER_ADMIN')) {
+            $query->where('organizacion_id', $user->id_organizacion);
 
-            $unidades = UnidadEjecutora::where('id_organizacion', $user->id_organizacion)
+            $unidades = UnidadEjecutora::where('organizacion_id', $user->id_organizacion)
                 ->orderBy('nombre_unidad')
                 ->get();
         } else {
@@ -80,7 +79,6 @@ class ProyectoController extends Controller
         //  Paginación
         $proyectos = $query->orderBy('created_at', 'desc')->paginate(15);
 
-
         $proyectos->getCollection()->transform(function ($proyecto) {
 
             $proyecto->calculo_avance = $proyecto->avance_real;
@@ -89,14 +87,12 @@ class ProyectoController extends Controller
 
         return view('dashboard.inversion.proyectos.index', compact('proyectos', 'unidades'));
     }
+    // Show proyectos
     public function show($id)
     {
-        //$proyecto = ProyectoInversion::findOrFail($id);
-        // dd($proyecto->getAttributes());
-
         $proyecto = ProyectoInversion::with([
             'documentos',
-            'objetivo.metasNacionales.objetivoNacional',
+            'objetivoEstrategico.metasNacionales.objetivoNacional.eje',
             'organizacion',
             'localizacion',
             'financiamientos.fuente',
@@ -112,28 +108,38 @@ class ProyectoController extends Controller
     public function create()
     {
         $idOrganizacion = Auth::user()->id_organizacion;
-        $objetivos = ObjetivoEstrategico::where('id_organizacion', $idOrganizacion)
+
+        // Objetivos
+        $objetivosEstr = ObjetivoEstrategico::where('organizacion_id', $idOrganizacion)
             ->where('estado', 1)
             ->with(['metasNacionales.ods'])
             ->get();
-        // Filtramos solo los programas que pertenecen a esta organización
-        $programas = Programa::where('id_organizacion', $idOrganizacion)
+
+        $programas = Programa::whereHas('plan', function ($query) use ($idOrganizacion) {
+            $query->where('organizacion_id', $idOrganizacion);
+            // $query->where('anio', date('Y'));
+        })
+            ->with('plan')
+            ->where('estado', 'APROBADO')
             ->orderBy('nombre_programa')
             ->get();
 
-        // Filtramos solo las unidades de esta organización
-        $unidades = UnidadEjecutora::where('id_organizacion', $idOrganizacion)
+        // Unidades Ejecutoras
+        $unidades = UnidadEjecutora::where('organizacion_id', $idOrganizacion)
             ->where('estado', 1)
             ->get();
 
-        $fuentes = FuenteFinanciamiento::all();
+        $fuentes   = FuenteFinanciamiento::all();
         $entidades = OrganizacionEstatal::orderBy('nom_organizacion')->get();
-        return view('dashboard.inversion.proyectos.crear', compact(
-            'objetivos',
+        $indicadoresDisponibles = IndicadorNacional::all();
+
+        return view('dashboard.inversion.proyectos.create', compact(
+            'objetivosEstr',
             'programas',
             'unidades',
             'fuentes',
-            'entidades'
+            'entidades',
+            'indicadoresDisponibles'
         ));
     }
     /**
@@ -141,6 +147,7 @@ class ProyectoController extends Controller
      */
     public function store(Request $request)
     {
+        //dd($request->all());
         // VALIDACIÓN
         $request->validate([
             'cup'                   => 'required|unique:tra_proyecto_inversion,cup',
@@ -148,20 +155,21 @@ class ProyectoController extends Controller
             'documentos.*'          => 'file|mimes:pdf|max:51200',
             'nombre_proyecto'       => 'required',
             'id_unidad_ejecutora'   => 'required|exists:cat_unidades_ejecutoras,id',
-            'id_objetivo_estrategico' => 'required|exists:cat_objetivo_estrategico,id_objetivo_estrategico',
+            'objetivo_estrategico_id' => 'required|exists:cat_objetivo_estrategico,id_objetivo_estrategico',
             'provincia'             => 'required',
             'monto_total_inversion' => 'required|numeric|min:0',
             'anio'                  => 'array',
-            'monto_anio'            => 'array'
+            'monto_anio'            => 'array',
+            //indicadores
+            'indicadores'           => 'nullable|array',
+            'indicadores.*'         => 'exists:cat_indicadores_nacionales,id_indicador',
+            //Contribuciones
+            'contribuciones'        => 'nullable|array',
+            'contribuciones.*'      => 'nullable|numeric|min:0|max:100',
         ]);
-        $user = $this->getUsuario();
+
         // VALIDACIÓN DE SUMAS
 
-        //Si es Super Admin y envio una org la usamos Si no forzamos la del usuario
-        $idOrganizacion = $user->id_organizacion;
-        if ($user->tieneRol('SUPER_ADMIN') && $request->has('id_organizacion')) {
-            $idOrganizacion = $request->id_organizacion;
-        }
         $totalProgramado = 0;
         if ($request->has('monto_anio')) {
             $totalProgramado = array_sum(array_map('floatval', $request->monto_anio));
@@ -183,10 +191,10 @@ class ProyectoController extends Controller
                 'tipo_inversion'        => $request->tipo_inversion,
 
                 // Relaciones
-                'id_programa'           => $request->id_programa,
-                'id_unidad_ejecutora'   => $request->id_unidad_ejecutora,
-                'id_organizacion'       => Auth::user()->id_organizacion,
-                'id_objetivo_estrategico' => $request->id_objetivo_estrategico,
+                'programa_id'           => $request->id_programa,
+                'unidad_ejecutora_id'   => $request->id_unidad_ejecutora,
+                'organizacion_id'       => Auth::user()->id_organizacion,
+                'objetivo_estrategico_id' => $request->objetivo_estrategico_id,
 
                 // Fechas y Montos
                 'fecha_inicio_estimada' => $request->fecha_inicio_estimada,
@@ -195,16 +203,15 @@ class ProyectoController extends Controller
                 'monto_total_inversion' => $request->monto_total_inversion,
 
                 // Estados
-                'estado_dictamen'       => $request->estado_dictamen,
-                'id_usuario_creacion'   => Auth::user()->id_usuario,
+                'estado_dictamen'       => 'Pendiente',
+                'usuario_creacion_id'   => Auth::user()->id_usuario,
                 'estado'                => 1
             ]);
 
             $idGenerado = $proyecto->id;
 
-            // -------------------
             // GUARDAR DOCUMENTOS
-            // --------------------
+
             if ($request->hasFile('documentos')) {
                 foreach ($request->file('documentos') as $archivo) {
                     // A. Subir archivo al storage
@@ -223,10 +230,7 @@ class ProyectoController extends Controller
                     ]);
                 }
             }
-
-            // ---------------------------------------------------------
             //  GUARDAR UBICACIÓN
-            // ---------------------------------------------------------
             DB::table('tra_proyecto_localizacion')->insert([
                 'id_proyecto' => $idGenerado,
                 'provincia'   => $request->provincia,
@@ -235,9 +239,7 @@ class ProyectoController extends Controller
                 'created_at'  => now()
             ]);
 
-            // ---------------------------------------------------------
             //  GUARDAR FINANCIAMIENTO
-            // ---------------------------------------------------------
             if ($request->has('anio')) {
                 $datosFinanciamiento = [];
                 foreach ($request->anio as $key => $anio) {
@@ -257,7 +259,29 @@ class ProyectoController extends Controller
                     DB::table('tra_financiamiento')->insert($datosFinanciamiento);
                 }
             }
-            //dd($request->all());
+
+            //Guaradar indicadores
+            if ($request->has('indicadores')) {
+                $datosSync = [];
+
+                // Obtenemos el array de contribuciones
+                $contribuciones = $request->input('contribuciones', []);
+
+                foreach ($request->indicadores as $idIndicador) {
+                    // Usamos intval($idIndicador) para buscar la clave correcta en el array
+                    $peso = isset($contribuciones[$idIndicador]) && is_numeric($contribuciones[$idIndicador])
+                        ? $contribuciones[$idIndicador]
+                        : 0;
+
+                    // 2. Construimos el array para sync
+                    $datosSync[$idIndicador] = [
+                        'contribucion_proyecto' => $peso
+                    ];
+                }
+
+                //  Guardamos todo de una sola vez en la tabla proyecto_indicador
+                $proyecto->indicadoresNacionales()->sync($datosSync);
+            }
             DB::commit();
 
             return redirect()->route('inversion.proyectos.marco-logico.index', $proyecto->id)
@@ -275,52 +299,66 @@ class ProyectoController extends Controller
     /**
      * Editar proyecto
      */
-    // En ProyectoController.php
     public function edit($id)
     {
-        $idOrganizacion = Auth::user()->id_organizacion;
         $user = $this->getUsuario();
+        //  Datos del usuario actual
+        $idOrganizacion = Auth::user()->id_organizacion;
 
-        // Buscamos el proyecto con sus relaciones (para llenar los inputs)
-        $proyecto = ProyectoInversion::with(['localizacion', 'objetivo'])
-            ->when(!$user->tieneRol('SUPER_ADMIN'), function ($q) use ($user) {
-                return $q->where('id_organizacion', $user->id_organizacion);
+        $proyecto = ProyectoInversion::with(['programa.plan', 'objetivoEstrategico', 'unidadEjecutora'])
+            ->when(!$user->hasRole('SUPER_ADMIN'), function ($q) use ($idOrganizacion) {
+                return $q->whereHas('programa.plan', function ($qPlan) use ($idOrganizacion) {
+                    $qPlan->where('organizacion_id', $idOrganizacion);
+                });
             })
             ->findOrFail($id);
-        //  Cargamos los catálogos filtrados tambien para mayor seguridad
-        if (!$user->tieneRol('SUPER_ADMIN')) {
-            $organizaciones = OrganizacionEstatal::where('id_organizacion', $user->id_organizacion)->get();
-        } else {
-            $organizaciones = OrganizacionEstatal::all();
-        }
+        $programas = Programa::whereHas('plan', function ($q) use ($idOrganizacion) {
+            $q->where('organizacion_id', $idOrganizacion);
+        })
+            ->with('plan')
+            ->orderBy('nombre_programa')
+            ->get();
 
-        $programas = Programa::where('id_organizacion', $idOrganizacion)->get();
-        $fuentes = FuenteFinanciamiento::all();
-        $unidades = UnidadEjecutora::where('id_organizacion', $idOrganizacion)->get();
-        $objetivos = ObjetivoEstrategico::where('id_organizacion', $idOrganizacion)
+        //  Objetivos Estratégicos
+        $objetivosEstr = ObjetivoEstrategico::where('organizacion_id', $idOrganizacion)
             ->where('estado', 1)
             ->with(['metasNacionales.ods'])
             ->get();
 
-        return view('dashboard.inversion.proyectos.editar', compact(
+        // Unidades Ejecutoras
+        $unidades = UnidadEjecutora::where('organizacion_id', $idOrganizacion)
+            ->where('estado', 1)
+            ->get();
+
+        // Fuentes y Organizaciones
+        $fuentes = FuenteFinanciamiento::all();
+
+        // Rol administradir
+        if ($user->hasRole('SUPER_ADMIN')) {
+            $organizaciones = OrganizacionEstatal::all();
+        } else {
+            // Si es usuario normal solo ve su propia organización en el select
+            $organizaciones = OrganizacionEstatal::where('id_organizacion', $idOrganizacion)->get();
+        }
+
+        return view('dashboard.inversion.proyectos.edit', compact(
             'proyecto',
             'organizaciones',
-            'objetivos',
+            'objetivosEstr',
             'programas',
             'fuentes',
             'unidades'
-
         ));
     }
 
     /**
      * Metodo update
      */
-    //METODO UDAPTE DIVIDO EN FUNCIONES PARA MOJR MANTENIMIENTO
+    //METODO UDAPTE DIVIDO EN FUNCIONES PARA MOJoR MANTENIMIENTO
 
     public function update(Request $request, $id)
     {
-        //dd($request->all());
+
         //  Validación (Idealmente esto iría en un FormRequest, pero lo dejamos aquí por ahora)
         $validado = $this->validarFormulario($request);
 
@@ -331,6 +369,8 @@ class ProyectoController extends Controller
         DB::transaction(function () use ($request, $proyecto) {
 
             $this->actualizarDatosGenerales($proyecto, $request);
+
+            $this->actualizarIndicadores($proyecto, $request);
 
             $this->actualizarUbicacion($proyecto, $request);
 
@@ -344,10 +384,12 @@ class ProyectoController extends Controller
     }
     private function validarFormulario(Request $request)
     {
+        //dd($request->all());
         return $request->validate([
             'cup'                   => 'required',
             'nombre_proyecto'       => 'required',
-            'id_objetivo_estrategico'  => 'required|numeric',
+            'objetivo_estrategico_id'  => 'exists:cat_objetivo_estrategico,id_objetivo_estrategico',
+            'unidad_ejecutora_id'   => 'exists:cat_unidades_ejecutoras,id',
             'monto_total_inversion' => 'required',
             'provincia'             => 'required',
             'canton'                => 'required',
@@ -358,6 +400,10 @@ class ProyectoController extends Controller
             'financiamientos.*.monto'     => 'required|numeric|min:0',
             'financiamientos.*.id_fuente' => 'required',
             'nuevos_documentos.*'         => 'file|mimes:pdf,docx,jpg,png|max:4096',
+            'indicadores'                 => 'required|array|min:1',
+            'indicadores.*'               => 'exists:cat_indicadores_nacionales,id_indicador',
+            'contribuciones'              => 'nullable|array',
+            'contribuciones.*'            => 'nullable|numeric|min:0|max:100',
         ]);
     }
     private function buscarProyectoSeguro($id)
@@ -365,7 +411,7 @@ class ProyectoController extends Controller
 
         $user = $this->getUsuario();
 
-        return ProyectoInversion::when(!$user->tieneRol('SUPER_ADMIN'), function ($q) use ($user) {
+        return ProyectoInversion::when(!$user->hasRole('SUPER_ADMIN'), function ($q) use ($user) {
             return $q->where('id_organizacion', $user->id_organizacion);
         })
             ->findOrFail($id);
@@ -383,19 +429,50 @@ class ProyectoController extends Controller
             'fecha_fin_estimada'      => $request->fecha_fin_estimada,
             'duracion_meses'          => $request->duracion_meses,
             'monto_total_inversion'   => $request->monto_total_inversion,
-            'id_objetivo_estrategico' => $request->id_objetivo_estrategico,
-            'estado_dictamen'         => $request->estado_dictamen,
+            'objetivo_estrategico_id' => $request->objetivo_estrategico_id,
+            'unidad_ejecutora_id'     => $request->unidad_ejecutora_id,
             'objetivo_nacional'       => $request->id_objetivo_nacional,
             'estado'                  => $request->has('estado') ? $request->estado : 0,
         ];
 
 
-        if ($this->getUsuario()->tieneRol('SUPER_ADMIN') && $request->has('id_organizacion')) {
+        if ($this->getUsuario()->hasRole('SUPER_ADMIN') && $request->has('id_organizacion')) {
             $datos['id_organizacion'] = $request->id_organizacion;
         }
-
+        //Actualizar dictame
+        if ($proyecto->estado_dictamen == 'Rechazado' || $proyecto->estadodictamen == 'Corregir') {
+            $proyecto->estado_dictamen = 'Pendiente';
+        }
+        // Actualizamos
         $proyecto->update($datos);
     }
+    /**
+     * Atualizar indicadores
+     */
+    private function actualizarIndicadores($proyecto, Request $request)
+    {
+        //
+        if ($request->has('indicadores')) {
+            $datosSync = [];
+            $contribuciones = $request->input('contribuciones', []);
+
+            foreach ($request->indicadores as $idIndicador) {
+                // Convertimos a int para evitar errores de índice string/number
+                $id = intval($idIndicador);
+
+                $peso = isset($contribuciones[$id]) && is_numeric($contribuciones[$id])
+                    ? $contribuciones[$id]
+                    : 0;
+
+                $datosSync[$id] = ['contribucion_proyecto' => $peso];
+            }
+            // sync borra lo viejo y pone lo nuevo
+            $proyecto->indicadoresNacionales()->sync($datosSync);
+        }
+    }
+    /**
+     * Actualizar ubicacion
+     */
     private function actualizarUbicacion($proyecto, Request $request)
     {
         // Usamos updateOrInsert para ser más eficientes
@@ -467,6 +544,7 @@ class ProyectoController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
     //Generar reporte PDF del proyecto
     public function generarReporte($id)
     {
@@ -545,8 +623,85 @@ class ProyectoController extends Controller
         return response()->json(['success' => false, 'message' => 'No encontrado'], 404);
     }
 
-    //////////////////////////
-    //Funcion eliminar proyecto
+    /**
+     * Actualizar dictamen
+     */
+    public function updateDictamen(Request $request, $id)
+    {
+        // Lógica de validación condicional
+        // Si el botón presionado NO es Aprobar entonces la observación es requerida
+        $reglas = [
+            'nuevo_dictamen' => 'required|in:Aprobar,Rechazar,Corregir,Pendiente',
+            'observaciones' => 'nullable|string|max:1000',
+        ];
+
+        // Validación: Obligar a comentar si rechazan
+        if ($request->nuevo_dictamen === 'Rechazar' || $request->nuevo_dictamen === 'Corregir') {
+            $reglas['observaciones'] = 'required|string|min:10|max:1000';
+        }
+
+        $request->validate($reglas, [
+            'observaciones.required' => 'Es obligatorio indicar el motivo para rechazar o pedir correcciones.'
+        ]);
+
+        // Procesar
+        $proyecto = ProyectoInversion::findOrFail($id);
+
+        // Mapeo de estados
+        $estadoMap = [
+            'Aprobar' => 'Aprobado',
+            'Rechazar' => 'Rechazado',
+            'Corregir' => 'Corregir',
+            'Pendiente' => 'Pendiente'
+        ];
+        $nuevoEstado = $estadoMap[$request->nuevo_dictamen] ?? $request->nuevo_dictamen;
+
+        // Guardar cambios
+        $proyecto->estado_dictamen = $nuevoEstado;
+
+        // Si aprueban podríamos limpiar las observaciones viejas para que quede limpio
+        if ($nuevoEstado == 'Aprobado') {
+            $proyecto->observaciones = $request->observaciones ?? "Aprobado, puede proceder a la ejecución.";
+            // O puedes guardar "Aprobado sin observaciones"
+        } else {
+            $proyecto->observaciones = $request->observaciones;
+        }
+
+        $proyecto->save();
+
+        return redirect()->route('inversion.proyectos.show', $id)
+            ->with('success', "Proyecto actualizado a estado:  $nuevoEstado .");
+    }
+
+    // Obtener el arbol completo de alineacion
+
+    public function getArbolAlineacion($idObjetivo)
+    {
+        try {
+            if (!$idObjetivo) {
+                throw new \Exception("ID de objetivo no recibido");
+            }
+
+            // Intentar la consulta
+            $objetivo = ObjetivoEstrategico::with([
+                'metasNacionales.indicadoresNacionales'
+            ])->findOrFail($idObjetivo);
+
+            // Devolver éxito
+            return response()->json($objetivo->metasNacionales);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'mensaje' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine()
+            ], 500);
+        }
+    }
+     /**
+     *  Funcion eliminar proyecto
+     */
+
     public function destroy($id)
     {
         // Buscamos el proyecto
@@ -573,4 +728,5 @@ class ProyectoController extends Controller
         /** @var User */
         return Auth::user();
     }
+
 }

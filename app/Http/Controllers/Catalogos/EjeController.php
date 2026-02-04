@@ -14,7 +14,6 @@ class EjeController extends Controller
     {
 
         $this->middleware('auth');
-
         //  Permiso de Lectura (Index y Show)
         $this->middleware('permiso:ejes.ver')->only(['index', 'show']);
 
@@ -74,7 +73,6 @@ class EjeController extends Controller
 
     public function store(Request $request)
     {
-        //dd($request->all());
         if (!$request->id_plan) {
             return back()->with('error', 'No se puede crear el eje: Falta el Plan Nacional Activo.');
         }
@@ -82,33 +80,24 @@ class EjeController extends Controller
         $request->validate([
             'nombre_eje'     => 'required|unique:cat_eje_pnd,nombre_eje|max:250',
             'descripcion_eje' => 'nullable|string',
-            'periodo_inicio' => 'required|integer|min:2000|max:2100',
-            'periodo_fin'    => 'required|integer|gte:periodo_inicio|max:2100',
             'url_documento'  => 'nullable|url',
             'estado'         => 'required|boolean',
         ], [
-
-            'periodo_fin.gte' => 'El año de fin no puede ser menor al de inicio.',
             'url_documento.url' => 'El formato del enlace no es válido.'
         ]);
         DB::beginTransaction();
         try {
             // Buscamos el primer plan que tenga estado ACTIVO
             $planActivo = PlanNacional::activo()->first();
-
             // Verificación de seguridad: Que pasa si no hay ningun plan activo
             if (!$planActivo) {
                 return back()->with('error', 'Error crítico: No existe un Plan Nacional ACTIVO en el sistema. Contacte al administrador.');
             }
-
-
-
+            //  Crear el nuevo EjeS
             $eje = new EjePnd();
-            $eje->id_plan_nacional = $request->id_plan;
+            $eje->id_plan = $request->id_plan;
             $eje->nombre_eje      = $request->nombre_eje;
             $eje->descripcion     = $request->descripcion_eje;
-            $eje->periodo_inicio  = $request->periodo_inicio;
-            $eje->periodo_fin     = $request->periodo_fin;
             $eje->url_documento   = $request->url_documento;
             $eje->estado          = $request->estado;
             $eje->save();
@@ -133,7 +122,7 @@ class EjeController extends Controller
             'descripcion' => 'nullable|string|max:500',
             'estado'      => 'required|in:0,1',
         ], [
-            // Mensajes personalizados opcionales
+
             'nombre_eje.unique' => 'Ya existe otro eje con este nombre.',
             'nombre_eje.required' => 'El nombre del eje es obligatorio.'
         ]);

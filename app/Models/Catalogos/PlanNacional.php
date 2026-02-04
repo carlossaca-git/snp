@@ -25,15 +25,12 @@ class PlanNacional extends Model
         'periodo_inicio',
         'periodo_fin',
         'registro_oficial',
-        'estado', // 'ACTIVO', 'INACTIVO'
-        // Los campos de auditoría (created_by, etc.) los maneja el Trait
+        'estado',
     ];
-
-    // Relaciones
 
     /**
      * Un Plan Nacional tiene muchos Ejes Estratégicos.
-     * Ejemplo: El Plan "Nuevo Ecuador" tiene los Ejes: Social, Económico...
+     *
      */
     public function ejes()
     {

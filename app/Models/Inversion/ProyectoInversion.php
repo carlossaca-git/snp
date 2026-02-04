@@ -6,18 +6,19 @@ use App\Models\Catalogos\EjePnd;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Seguridad\User;
 
-
-use App\Models\Planificacion\Programa;
+use App\Models\Inversion\Programa;
 use App\Models\Inversion\ProyectoLocalizacion;
 use App\Models\Inversion\Financiamiento;
 use App\Models\Institucional\OrganizacionEstatal;
 use App\Models\Institucional\UnidadEjecutora;
 use App\Models\Planificacion\ObjetivoEstrategico;
-use App\Traits\Auditable;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Seguridad\User;
+use App\Models\Catalogos\MetaNacional;
+use App\Models\Catalogos\IndicadorNacional;
 
 
 class ProyectoInversion extends Model
@@ -29,12 +30,12 @@ class ProyectoInversion extends Model
     protected $primaryKey = 'id';
 
     protected $fillable = [
-        'id_programa',
-        'id_usuario_creacion',
+        'programa_id',
+        'usuario_creacion_id',
         'avance_fisico_real',
         'cup',
         'nombre_proyecto',
-        'id_unidad_ejecutora',
+        'unidad_ejecutora_id',
         'descripcion_diagnostico',
         'tipo_inversion',
         'fecha_inicio_estimada',
@@ -42,11 +43,11 @@ class ProyectoInversion extends Model
         'duracion_meses',
         'anio',
         'monto_total_inversion',
-        'id_fuente',
+        'fuente_id',
         'monto_anio',
         'estado_dictamen',
-        'id_organizacion',
-        'id_objetivo_estrategico',
+        'organizacion_id',
+        'objetivo_estrategico_id',
         'provincia',
         'canton',
         'parroquia',
@@ -72,21 +73,48 @@ class ProyectoInversion extends Model
         );
     }
 
-    // Un Proyecto se alinea a un Objetivo Nacional
-    public function objetivo()
+    //Un proyecto se vincula a un objetivo estrategico
+    public function objetivoEstrategico()
     {
         return $this->belongsTo(
             ObjetivoEstrategico::class,
-            'id_objetivo_estrategico',
+            'objetivo_estrategico_id',
             'id_objetivo_estrategico'
         );
     }
+//Un proyecto contrubuse a uno o mas indicadores
 
-    public function programa()
+    public function indicadoresNacionales()
     {
-        return $this->belongsTo(Programa::class, 'id_programa');
+        return $this->belongsToMany(
+            IndicadorNacional::class,
+            'tra_proyecto_indicador',
+            'proyecto_id',
+            'indicador_nacional_id'
+        )
+            ->withPivot('contribucion_proyecto')
+            ->withTimestamps();
     }
 
+    // Alineación Nacional
+    public function metaNacional()
+    {
+        return $this->belongsTo(MetaNacional::class, 'meta_nacional_id');
+    }
+
+    // 3. Obtener ODS a través de la Meta (Automático)
+    public function getOdsAttribute()
+    {
+        // Si no hay meta, devolvemos colección vacía
+        return $this->metaNacional ? $this->metaNacional->ods : collect([]);
+    }
+
+    // Un Proyecto pertenece a un Programa
+    public function programa()
+    {
+        return $this->belongsTo(Programa::class, 'programa_id');
+    }
+    // Un Proyecto tiene una localización
     public function localizacion()
     {
         return $this->hasOne(ProyectoLocalizacion::class, 'id_proyecto', 'id');
@@ -96,10 +124,10 @@ class ProyectoInversion extends Model
     {
         return $this->hasMany(Financiamiento::class, 'id_proyecto', 'id');
     }
+    // Un proyecto pertenece a una Unidad Ejecutora
     public function unidadEjecutora()
     {
         // Modelo Padre
-        // La columna en ESTA tabla que sirve de unión
         return $this->belongsTo(UnidadEjecutora::class, 'id_unidad_ejecutora');
     }
     public function documentos()
@@ -125,7 +153,7 @@ class ProyectoInversion extends Model
                 }
 
                 // Si es un usuario normal Admin TI, Jefe, Técnico,
-                $builder->where('id_organizacion', $user->id_organizacion);
+                $builder->where('organizacion_id', $user->id_organizacion);
             }
         });
     }
@@ -152,20 +180,7 @@ class ProyectoInversion extends Model
     // Calcula el avance real del proyecto basado en las actividades y sus ponderaciones
     public function getAvanceRealAttribute()
     {
-        // Buscamos solo las ACTIVIDADES (Nivel inferior) de este proyecto
-        $actividades = $this->marcoLogico->where('nivel', 'ACTIVIDAD');
-
-        // Si no hay actividades, el avance es 0
-        if ($actividades->isEmpty()) return 0;
-        $totalPonderacion = $actividades->sum('ponderacion');
-
-        if ($totalPonderacion == 0) return 0;
-
-        $sumaPonderada = $actividades->sum(function ($act) {
-            return $act->avance_actual * $act->ponderacion;
-        });
-
-        return $sumaPonderada / $totalPonderacion;
+      return $this->avance_fisico_real ?? 0;
     }
     public function getEjeAttribute()
     {

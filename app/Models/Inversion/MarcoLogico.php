@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Inversion\IndicadorMarco;
+use App\Models\Inversion\ProyectoInversion;
+use App\Models\Inversion\AvanceActividad;
 
 class MarcoLogico extends Model
 {
@@ -29,8 +31,15 @@ class MarcoLogico extends Model
         return $this->hasMany(MarcoLogico::class, 'padre_id', 'id_marco_logico')
             ->where('nivel', 'ACTIVIDAD');
     }
-   public function proyecto()
+    public function proyecto()
     {
         return $this->belongsTo(ProyectoInversion::class, 'proyecto_id', 'id_proyecto');
+    }
+    //
+    public function historialAvances()
+    {
+        // Ajusta los nombres si tu modelo de avance se llama diferente (ej: AvanceActividad)
+        // y asegúrate que la tabla sea 'tra_avances_actividad'
+        return $this->hasMany(AvanceActividad::class, 'marco_logico_id', 'id_marco_logico');
     }
 }

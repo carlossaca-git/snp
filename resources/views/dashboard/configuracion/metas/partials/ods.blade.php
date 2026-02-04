@@ -5,7 +5,7 @@
             <div class="modal-header bg-primary text-white">
                 <div>
                     <h5 class="modal-title"><i class="fas fa-link me-2"></i>Vincular ODS</h5>
-                    Meta nacional: <small id="nombre_meta_ods_display" class="fw-light opacity-75"></small>
+                    Meta nacional: <span id="nombre_meta_ods_display" class="fw-light"></span>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
